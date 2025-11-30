@@ -1,26 +1,28 @@
-/* FULL PAGE BLUE WITH BOTTOM GRADIENT */
+/* MAIN CONTAINER */
 .welcome-container {
   width: 100%;
   height: 100vh;
-  background: linear-gradient(to bottom, #1e7be0 0%, #1e7be0 55%, #ffffff 100%);
-  color: white;
-  font-family: "Inter", sans-serif;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  background: linear-gradient(
+    to bottom,
+    #1e90ff 0%,
+    #4fa7ff 45%,
+    #ffffff 88%
+  );
+  padding: 20px;
   padding-top: 25px;
-  box-sizing: border-box;
+  font-family: "Inter", sans-serif;
+  color: #ffffff;
+  overflow: hidden;
 }
 
-/* TOP BAR — CENTERED HORIZONTALLY */
+/* TOP BAR — EXACT LIKE SCREENSHOT */
 .top-bar {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 20px;
+  justify-content: space-between;
+  margin-top: 5px;
 }
 
-/* LEFT SIDE PROFILE */
 .profile {
   display: flex;
   align-items: center;
@@ -28,8 +30,8 @@
 }
 
 .avatar {
-  width: 45px;
-  height: 45px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
 }
 
@@ -40,15 +42,16 @@
 }
 
 .profile-text span {
+  margin: 0;
+  padding: 0;
   font-size: 12px;
-  opacity: 0.95;
+  opacity: 0.9;
 }
 
-/* RIGHT SIDE: LANGUAGE + SPEAKER ICON */
 .top-right {
   display: flex;
   align-items: center;
-  gap: 15px;
+  gap: 8px;
 }
 
 .language {
@@ -57,50 +60,53 @@
 
 .speaker {
   font-size: 18px;
+  margin-top: 2px;
 }
 
-/* GREETING (CENTERED) */
+/* GREETING SECTION — EXACT POSITION */
 .greeting {
-  margin-top: 120px;
-  text-align: center;
+  margin-top: 135px; /* EXACT spacing based on screenshot */
+  padding-left: 2px;
 }
 
 .greeting h1 {
-  font-size: 38px;
+  font-size: 30px;
   font-weight: 700;
   margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .greeting h2 {
-  font-size: 28px;
+  font-size: 26px;
   font-weight: 700;
-  margin-top: 6px;
+  margin-top: 10px;
+  margin-bottom: 0;
 }
 
-/* CHAT BUTTON EXACT LIKE FIRST SCREENSHOT */
-.chat-button-wrapper {
-  margin-top: 40px;
-  width: 100%;
-  display: flex;
-  justify-content: center;
-}
-
+/* CHAT BOX BUTTON — EXACT MATCH */
 .chat-box {
-  background: white;
-  color: #1e7be0;
-  padding: 18px 20px;
-  border-radius: 14px;
+  margin-top: 45px;
+  background: #ffffff;
+  color: #1e90ff;
+  padding: 20px 22px;
+  border-radius: 12px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   cursor: pointer;
-  font-size: 17px;
+  font-size: 15px;
   font-weight: 600;
-  width: 80%;
-  max-width: 420px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+  width: 100%;
+  max-width: 100%;
+  box-shadow: 0px 3px 12px rgba(0, 0, 0, 0.12);
+}
+
+.chat-box:hover {
+  opacity: 0.96;
 }
 
 .chat-arrow {
-  font-size: 22px;
+  font-size: 20px;
 }
