@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from "react";
-import "./App.css";
 import { db } from "./firebase";
 import {
   ref,
@@ -7,17 +6,9 @@ import {
   onValue,
   serverTimestamp,
 } from "firebase/database";
+import "./App.css";
 
-function App() {
-  return (
-    <div className="App">
-      <h1>Live Chat</h1>
-      <ChatRoom />
-    </div>
-  );
-}
-
-function ChatRoom() {
+function Chat() {
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
   const dummy = useRef();
@@ -54,7 +45,9 @@ function ChatRoom() {
   };
 
   return (
-    <>
+    <div className="App">
+      <h1>Live Chat</h1>
+
       <main>
         {messages.map((msg) => (
           <ChatMessage key={msg.id} message={msg} />
@@ -71,7 +64,7 @@ function ChatRoom() {
         />
         <button type="submit">Send</button>
       </form>
-    </>
+    </div>
   );
 }
 
@@ -83,4 +76,4 @@ function ChatMessage({ message }) {
   );
 }
 
-export default App;
+export default Chat;
