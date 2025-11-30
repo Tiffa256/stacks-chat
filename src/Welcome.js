@@ -6,10 +6,26 @@ export default function Welcome() {
   const navigate = useNavigate();
 
   return (
-    <div className="welcome-container">
+    <div
+      className="welcome-container"
+      style={{
+        paddingTop: 0,     // 🔥 REMOVE TOP PADDING THAT PUSHES BAR DOWN
+        marginTop: 0,      // 🔥 ENSURE NO MARGIN ABOVE
+      }}
+    >
 
       {/* Top Bar */}
-      <div className="top-bar">
+      <div
+        className="top-bar"
+        style={{
+          marginTop: 0,     // 🔥 FORCE TO TOP
+          paddingTop: 10,   // (same look)
+          position: "relative", 
+          top: 0,
+          left: 0,
+          width: "100%",
+        }}
+      >
         <div className="profile">
           <img
             src="https://i.pravatar.cc/60?img=32"
@@ -42,4 +58,3 @@ export default function Welcome() {
     </div>
   );
 }
-
