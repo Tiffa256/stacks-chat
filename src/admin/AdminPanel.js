@@ -1,47 +1,53 @@
+// src/admin/AdminPanel.js
+// Ensure we read from the "messages" root (NOT "chats") so admin opens the same path users write to.
 import React, { useEffect, useState } from "react";
-import { db } from "../firebase";
 import { ref, onValue } from "firebase/database";
 import AdminChat from "./AdminChat";
 import "./Admin.css";
+import { db } from "../firebase";
 
 function AdminPanel() {
   const [users, setUsers] = useState([]);
   const [activeUser, setActiveUser] = useState(null);
 
-  // Load users and preview message
   useEffect(() => {
-    const chatsRef = ref(db, "chats");
+    const messagesRef = ref(db, "messages");
 
-    onValue(chatsRef, (snapshot) => {
+    const off = onValue(messagesRef, (snapshot) => {
       const data = snapshot.val();
       if (!data) {
         setUsers([]);
         return;
       }
 
-      const userList = Object.keys(data).map((userId) => {
-        const messages = data[userId];
-        const keys = Object.keys(messages);
-        const lastKey = keys[keys.length - 1];
-        const lastMsg = messages[lastKey];
+      const userList = Object.entries(data)
+        .map(([userId, msgs]) => {
+          if (!msgs) return null;
+          const msgArray = Object.entries(msgs).map(([k, v]) => ({
+            id: k,
+            ...v,
+          }));
+          msgArray.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+          const lastMsg = msgArray[0];
 
-        return {
-          userId,
-          lastMessage: lastMsg?.text || "Image",
-          lastTimestamp: lastMsg?.timestamp || 0,
-        };
-      });
+          return {
+            userId,
+            lastMessage: lastMsg?.text || "Image",
+            lastTimestamp: lastMsg?.createdAt || 0,
+          };
+        })
+        .filter(Boolean);
 
-      // Sort users by most recent message
       userList.sort((a, b) => b.lastTimestamp - a.lastTimestamp);
 
       setUsers(userList);
     });
+
+    return () => off();
   }, []);
 
   return (
     <div className="admin-container">
-
       {/* LEFT SIDEBAR (user list) */}
       <div className="admin-users">
         <h2 className="admin-title">Users</h2>
