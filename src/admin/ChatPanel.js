@@ -1,18 +1,34 @@
 import React, { useEffect, useRef, useState } from "react";
-import { subscribeToMessages, deleteMessage as firebaseDeleteMessage, pushMessage } from "../firebase";
+import { subscribeToMessages, deleteMessage as firebaseDeleteMessage } from "../firebase";
 import { useAdmin } from "./AdminContext";
 import Composer from "./Composer";
 import "./AdminPanel.css";
 import ChatMessage from "./ChatMessage";
+import DateSeparator from "./DateSeparator";
 
 /*
- ChatPanel - updated to support reply/delete/download actions.
+ ChatPanel updated:
+ - Uses useAdmin().sendFileMessage for uploads and shows progress
+ - Opens as page when URL contains /admin/chat/:userId (AdminApp sets activeConversation)
 */
 
+function formatDateHeader(ts) {
+  if (!ts) return "";
+  const d = new Date(ts);
+  const today = new Date();
+  const dayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+  const yesterdayStart = dayStart - 24 * 60 * 60 * 1000;
+
+  if (ts >= dayStart) return "Today";
+  if (ts >= yesterdayStart) return "Yesterday";
+  return d.toLocaleDateString();
+}
+
 export default function ChatPanel() {
-  const { activeConversation, agentId } = useAdmin();
+  const { activeConversation, agentId, sendFileMessage } = useAdmin();
   const [messages, setMessages] = useState([]);
-  const [replyTo, setReplyTo] = useState(null); // message object being replied to
+  const [replyTo, setReplyTo] = useState(null);
+  const [uploads, setUploads] = useState({}); // track upload progress by temp id
   const scrollRef = useRef(null);
 
   useEffect(() => {
@@ -23,18 +39,25 @@ export default function ChatPanel() {
     }
     const unsub = subscribeToMessages(activeConversation, (msgs) => {
       setMessages(msgs);
-      setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: "smooth" }), 40);
+      setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: "smooth" }), 60);
     });
     return () => unsub && unsub();
   }, [activeConversation]);
 
-  // create lookup by id to show repliedMessage inline
-  const messageById = messages.reduce((acc, m) => {
-    acc[m.id] = m;
-    return acc;
-  }, {});
+  const messageById = messages.reduce((acc, m) => { acc[m.id] = m; return acc; }, {});
 
-  // handle sending text (with optional replyTo)
+  const grouped = [];
+  let lastDay = null;
+  messages.forEach((m) => {
+    const day = new Date(m.createdAt || 0);
+    const dayKey = new Date(day.getFullYear(), day.getMonth(), day.getDate()).getTime();
+    if (lastDay !== dayKey) {
+      grouped.push({ type: "date", ts: m.createdAt, key: `d-${dayKey}` });
+      lastDay = dayKey;
+    }
+    grouped.push({ type: "msg", msg: m, key: m.id });
+  });
+
   const handleSendText = async (text) => {
     if (!activeConversation) return;
     const payload = {
@@ -47,19 +70,49 @@ export default function ChatPanel() {
       payload.replyTo = replyTo.id;
       payload.replyText = replyTo.text || "";
     }
-    await pushMessage(activeConversation, payload);
+    try {
+      // use firebase push via AdminContext (sendTextMessage in AdminContext calls pushMessage)
+      // Using pushMessage directly is acceptable but we rely on AdminContext for meta updates normally
+      // Here we just set replyTo to null after sending; AdminContext already pushes meta
+      // (AdminContext exposes sendTextMessage; but we call pushMessage via imported helper or AdminContext)
+      // Simpler: use pushMessage by importing it if needed (left as previously implemented).
+      // We'll keep sending via AdminContext's push from earlier file flow by firing a custom event:
+      const evt = new CustomEvent("admin-send-text", { detail: { text, replyTo } });
+      window.dispatchEvent(evt);
+    } catch (e) {
+      console.error("send failed", e);
+    }
     setReplyTo(null);
   };
 
   const handleSendFile = async (file, onProgress) => {
-    // Use Composer's existing onSendFile flow (it calls AdminContext or ChatPanel's handler depending on wiring)
-    // If you want file replies support, extend similarly to include replyTo metadata in pushMessageWithFile flow.
-    // For now, delegate to the Composer's onSendFile prop.
+    if (!activeConversation || !sendFileMessage) return;
+    // create a temporary key for upload UI
+    const tempId = `upload_${Date.now()}`;
+    setUploads((u) => ({ ...u, [tempId]: { name: file.name, progress: 0 } }));
+    try {
+      await sendFileMessage(activeConversation, file, {}, (percent) => {
+        setUploads((u) => ({ ...u, [tempId]: { name: file.name, progress: percent } }));
+      });
+      // remove upload entry after completion
+      setUploads((u) => {
+        const next = { ...u };
+        delete next[tempId];
+        return next;
+      });
+    } catch (err) {
+      console.error("upload failed", err);
+      setUploads((u) => {
+        const next = { ...u };
+        delete next[tempId];
+        return next;
+      });
+      alert("Upload failed");
+    }
   };
 
   const handleReply = (message) => {
     setReplyTo(message);
-    // focus composer if desired
     const el = document.querySelector(".chat-composer textarea");
     if (el) el.focus();
   };
@@ -68,7 +121,6 @@ export default function ChatPanel() {
     if (!activeConversation || !message?.id) return;
     try {
       await firebaseDeleteMessage(activeConversation, message.id);
-      // optional: remove from local state immediately for snappy UX
       setMessages((prev) => prev.filter((m) => m.id !== message.id));
     } catch (e) {
       console.error("delete failed", e);
@@ -88,23 +140,42 @@ export default function ChatPanel() {
       </div>
 
       <div className="chat-body-admin">
-        {messages.length === 0 ? (
+        {grouped.length === 0 ? (
           <div className="no-msg">No messages yet</div>
         ) : (
-          messages.map((m) => (
-            <ChatMessage
-              key={m.id}
-              m={m}
-              isAdmin={m.sender === agentId}
-              onReply={handleReply}
-              onDelete={handleDelete}
-              onDownload={() => {
-                if (m.url) window.open(m.url, "_blank");
-              }}
-              repliedMessage={m.replyTo ? messageById[m.replyTo] : null}
-            />
-          ))
+          grouped.map((item) => {
+            if (item.type === "date") {
+              const label = formatDateHeader(item.ts);
+              return <DateSeparator key={item.key} label={label} />;
+            } else {
+              const m = item.msg;
+              return (
+                <ChatMessage
+                  key={m.id}
+                  m={m}
+                  isAdmin={m.sender === agentId}
+                  onReply={handleReply}
+                  onDelete={handleDelete}
+                  onDownload={() => m.url && window.open(m.url, "_blank")}
+                  repliedMessage={m.replyTo ? messageById[m.replyTo] : null}
+                />
+              );
+            }
+          })
         )}
+
+        {/* show upload progress items */}
+        {Object.entries(uploads).map(([k, u]) => (
+          <div key={k} style={{ alignSelf: "flex-end", marginTop: 8 }}>
+            <div style={{ padding: 10, borderRadius: 10, background: "#fff", width: 240 }}>
+              <div style={{ fontSize: 13, fontWeight: 700 }}>{u.name}</div>
+              <div style={{ height: 6, background: "#eee", borderRadius: 6, marginTop: 8 }}>
+                <div style={{ width: `${u.progress}%`, height: "100%", background: "var(--accent)", borderRadius: 6 }} />
+              </div>
+            </div>
+          </div>
+        ))}
+
         <div ref={scrollRef} />
       </div>
 
