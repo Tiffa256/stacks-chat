@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import "./Chat.css";
-import { db } from "./firebase";
+import { db, pushMessageWithFile } from "./firebase";
 import { ref, push, onValue } from "firebase/database";
 
 // Get user ID from URL
@@ -13,7 +13,9 @@ function Chat() {
   const userId = getUserId();
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
+  const [uploading, setUploading] = useState(null); // { name, progress }
   const dummy = useRef();
+  const fileRef = useRef();
 
   useEffect(() => {
     console.log("User Chat subscribing to path:", `messages/${userId}`);
@@ -32,8 +34,7 @@ function Chat() {
       dummy.current?.scrollIntoView({ behavior: "smooth" });
     });
 
-    // onValue returns the unsubscribe function when using modular API pattern
-    // but to be safe we'll return a cleanup that detaches listeners
+    // cleanup
     return () => chatRef.off && chatRef.off();
   }, [userId]);
 
@@ -53,6 +54,49 @@ function Chat() {
     });
 
     setText("");
+  };
+
+  // Open file picker
+  const onAttachClick = () => {
+    fileRef.current && fileRef.current.click();
+  };
+
+  // Handle file selection and upload
+  const handleFile = async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+
+    // show uploading UI
+    setUploading({ name: file.name, progress: 0 });
+    try {
+      const meta = {
+        type: file.type && file.type.startsWith("image") ? "image" : "file",
+        fileName: file.name,
+        sender: userId,
+      };
+
+      const result = await pushMessageWithFile(
+        userId,
+        file,
+        meta,
+        (percent) => {
+          // progress callback (0-100)
+          setUploading((u) => ({ ...(u || {}), progress: Math.round(percent) }));
+          console.log("upload progress", percent);
+        }
+      );
+
+      console.log("Upload complete:", result);
+    } catch (err) {
+      console.error("Upload failed", err);
+      alert("Upload failed. See console for details.");
+    } finally {
+      setUploading(null);
+      // allow selecting same file again
+      try {
+        e.target.value = "";
+      } catch (err) {}
+    }
   };
 
   return (
@@ -77,7 +121,17 @@ function Chat() {
 
       {/* Input */}
       <form className="chat-input" onSubmit={sendMessage}>
-        <button type="button" className="attach-btn">📎</button>
+        {/* hidden file input */}
+        <input
+          type="file"
+          ref={fileRef}
+          style={{ display: "none" }}
+          onChange={handleFile}
+        />
+
+        <button type="button" className="attach-btn" onClick={onAttachClick}>
+          📎
+        </button>
 
         <input
           value={text}
@@ -87,6 +141,24 @@ function Chat() {
 
         <button type="submit" className="send-btn">➤</button>
       </form>
+
+      {/* Minimal upload progress indicator */}
+      {uploading && (
+        <div style={{
+          position: "fixed",
+          bottom: 80,
+          left: 24,
+          background: "#fff",
+          padding: 10,
+          borderRadius: 8,
+          boxShadow: "0 6px 18px rgba(0,0,0,0.06)"
+        }}>
+          <div style={{ fontSize: 13, fontWeight: 600 }}>{uploading.name}</div>
+          <div style={{ width: 240, height: 8, background: "#eee", borderRadius: 6, marginTop: 8 }}>
+            <div style={{ width: `${uploading.progress}%`, height: "100%", background: "#0b7bdb", borderRadius: 6 }} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -102,6 +174,7 @@ function ChatBubble({ message, userId }) {
         ) : (
           <p>{message.text}</p>
         )}
+        <div style={{ fontSize: 11, color: "#777", marginTop: 6 }}>{message.createdAt ? new Date(message.createdAt).toLocaleTimeString() : ""}</div>
       </div>
     </div>
   );
