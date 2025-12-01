@@ -1,22 +1,26 @@
 import React from "react";
 import "./AdminPanel.css";
 import Avatar from "./Avatar";
+import { useNavigate } from "react-router-dom";
+import { useAdmin } from "./AdminContext";
 
 /*
- ConversationListItem - polished layout
- Props:
-  - user: { userId, lastMessage, lastSender, lastTimestamp, unreadCount }
-  - active: boolean
-  - onClick: function
+ ConversationListItem - navigates to /admin/chat/:userId when clicked
 */
-
-export default function ConversationListItem({ user, active, onClick }) {
+export default function ConversationListItem({ user, active }) {
   const lastTime = user.lastTimestamp ? new Date(user.lastTimestamp) : null;
   const timeLabel = lastTime ? lastTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
   const isUnread = (user.unreadCount || 0) > 0 && user.lastSender !== "admin";
 
+  const navigate = useNavigate();
+  const { setActiveConversation } = useAdmin();
+
   const handleClick = (e) => {
-    if (onClick) onClick(e);
+    const uid = user.userId || user.id;
+    // Set in context
+    setActiveConversation(uid);
+    // Navigate to chat page (keeps SPA navigation)
+    navigate(`/admin/chat/${encodeURIComponent(uid)}`, { replace: false });
   };
 
   return (
