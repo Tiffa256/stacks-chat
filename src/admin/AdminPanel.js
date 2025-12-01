@@ -8,6 +8,7 @@ function AdminPanel() {
   const [users, setUsers] = useState([]);
   const [activeUser, setActiveUser] = useState(null);
 
+  // Load users and preview message
   useEffect(() => {
     const chatsRef = ref(db, "chats");
 
@@ -18,34 +19,37 @@ function AdminPanel() {
         return;
       }
 
-      const userList = Object.keys(data).map((userId) => ({
-        userId,
-        lastMessage: getLastMessage(data[userId]),
-      }));
+      const userList = Object.keys(data).map((userId) => {
+        const messages = data[userId];
+        const keys = Object.keys(messages);
+        const lastKey = keys[keys.length - 1];
+        const lastMsg = messages[lastKey];
+
+        return {
+          userId,
+          lastMessage: lastMsg?.text || "Image",
+          lastTimestamp: lastMsg?.timestamp || 0,
+        };
+      });
+
+      // Sort users by most recent message
+      userList.sort((a, b) => b.lastTimestamp - a.lastTimestamp);
 
       setUsers(userList);
     });
   }, []);
 
-  const getLastMessage = (messagesObj) => {
-    const keys = Object.keys(messagesObj);
-    const lastKey = keys[keys.length - 1];
-    return messagesObj[lastKey]?.text || "Image";
-  };
-
   return (
     <div className="admin-container">
 
-      {/* LEFT SIDE */}
+      {/* LEFT SIDEBAR (user list) */}
       <div className="admin-users">
         <h2 className="admin-title">Users</h2>
 
         {users.map((u) => (
           <div
             key={u.userId}
-            className={`user-item ${
-              activeUser === u.userId ? "active" : ""
-            }`}
+            className={`user-item ${activeUser === u.userId ? "active" : ""}`}
             onClick={() => setActiveUser(u.userId)}
           >
             <strong>{u.userId}</strong>
@@ -54,7 +58,7 @@ function AdminPanel() {
         ))}
       </div>
 
-      {/* RIGHT SIDE */}
+      {/* RIGHT SIDE (chat window) */}
       <div className="admin-chat">
         {activeUser ? (
           <AdminChat userId={activeUser} />
