@@ -10,6 +10,7 @@ import Chat from "./Chat";
 import AdminDashboard from "./admin/AdminDashboard";
 import AdminUsers from "./admin/AdminUsers";
 import AdminMessages from "./admin/AdminMessages";
+import AdminChat from "./admin/AdminChat";
 
 import "./App.css";
 
@@ -37,6 +38,12 @@ function App() {
         <Route
           path="/admin/messages"
           element={isAdmin ? <AdminMessages /> : <Navigate to="/" />}
+        />
+
+        {/* NEW: Admin Chat Page */}
+        <Route
+          path="/admin/chat/:userId"
+          element={isAdmin ? <AdminChat /> : <Navigate to="/" />}
         />
 
       </Routes>
