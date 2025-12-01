@@ -1,4 +1,4 @@
-// src/admin/AdminMessages.jsx
+// src/admin/AdminMessages.js
 import React, { useEffect, useState } from "react";
 import { ref, onValue } from "firebase/database";
 import { db } from "../firebase";
@@ -28,22 +28,31 @@ export default function AdminMessages() {
             ...value,
           }));
 
-          // skip users with no messages
           if (msgArray.length === 0) return null;
 
-          // sort newest first
-          msgArray.sort((a, b) => b.createdAt - a.createdAt);
+          // Sort by date (newest first)
+          msgArray.sort(
+            (a, b) => (b.createdAt || 0) - (a.createdAt || 0)
+          );
+
+          const latest = msgArray[0];
 
           return {
             userId,
-            latestMessage: msgArray[0],
+            latestMessage: {
+              text: latest.text || "",
+              sender: latest.sender || "unknown",
+              createdAt: latest.createdAt || 0,
+            },
           };
         })
-        .filter(Boolean); // remove null entries
+        .filter(Boolean); // remove invalid entries
 
-      // Sort users by latest message time
+      // Sort users by message time
       userList.sort(
-        (a, b) => b.latestMessage.createdAt - a.latestMessage.createdAt
+        (a, b) =>
+          (b.latestMessage?.createdAt || 0) -
+          (a.latestMessage?.createdAt || 0)
       );
 
       setUsers(userList);
@@ -56,7 +65,7 @@ export default function AdminMessages() {
 
   return (
     <div className="admin-container">
-      <h1 className="admin-title">Messages by Users</h1>
+      <h1 className="admin-title">Messages</h1>
 
       {users.length === 0 ? (
         <p>No messages found.</p>
@@ -82,7 +91,9 @@ export default function AdminMessages() {
                 <td>{latestMessage.text}</td>
                 <td>{latestMessage.sender}</td>
                 <td>
-                  {new Date(latestMessage.createdAt).toLocaleString()}
+                  {latestMessage.createdAt
+                    ? new Date(latestMessage.createdAt).toLocaleString()
+                    : "No time"}
                 </td>
               </tr>
             ))}
