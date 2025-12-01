@@ -12,7 +12,7 @@ export default function AdminChat({ userId }) {
   useEffect(() => {
     if (!userId) return;
 
-    const messagesRef = ref(db, `chats/${userId}`);
+    const messagesRef = ref(db, `messages/${userId}`);
 
     return onValue(messagesRef, (snapshot) => {
       const data = snapshot.val();
@@ -34,9 +34,9 @@ export default function AdminChat({ userId }) {
   }, [userId]);
 
   const sendMessage = async () => {
-    if (text.trim() === "") return;
+    if (!text.trim() || !userId) return;
 
-    const msgRef = ref(db, `chats/${userId}`);
+    const msgRef = ref(db, `messages/${userId}`);
 
     await push(msgRef, {
       sender: "admin",
@@ -53,18 +53,16 @@ export default function AdminChat({ userId }) {
         Chat with <strong>{userId}</strong>
       </div>
 
-      {/* Chat messages */}
+      {/* Chat Messages */}
       <div className="admin-chat-body">
         {messages.map((msg) => (
           <div
             key={msg.id}
-            className={
-              msg.sender === "admin" ? "bubble-right" : "bubble-left"
-            }
+            className={msg.sender === "admin" ? "bubble-right" : "bubble-left"}
           >
             <div className="bubble-text">{msg.text}</div>
             <div className="bubble-time">
-              {new Date(msg.createdAt).toLocaleTimeString()}
+              {new Date(msg.createdAt || 0).toLocaleTimeString()}
             </div>
           </div>
         ))}
@@ -72,7 +70,7 @@ export default function AdminChat({ userId }) {
         <div ref={bottomRef}></div>
       </div>
 
-      {/* Input bar */}
+      {/* Input */}
       <div className="admin-chat-input">
         <input
           type="text"
