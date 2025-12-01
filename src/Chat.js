@@ -8,15 +8,22 @@ import {
   serverTimestamp,
 } from "firebase/database";
 
+// Get user ID from URL
+function getUserId() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get("user") || "unknown-user";
+}
+
 function Chat() {
+  const userId = getUserId(); // ← VERY IMPORTANT
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
   const dummy = useRef();
 
   useEffect(() => {
-    const messagesRef = ref(db, "messages");
+    const userChatRef = ref(db, `chats/${userId}`);
 
-    onValue(messagesRef, (snapshot) => {
+    onValue(userChatRef, (snapshot) => {
       const data = snapshot.val();
       const loaded = data
         ? Object.keys(data).map((id) => ({ id, ...data[id] }))
@@ -25,17 +32,17 @@ function Chat() {
       setMessages(loaded);
       dummy.current?.scrollIntoView({ behavior: "smooth" });
     });
-  }, []);
+  }, [userId]);
 
   const sendMessage = async (e) => {
     e.preventDefault();
     if (!text.trim()) return;
 
-    const messagesRef = ref(db, "messages");
+    const chatRef = ref(db, `chats/${userId}`);
 
-    await push(messagesRef, {
+    await push(chatRef, {
       text,
-      sender: "admin", // BLUE BUBBLE
+      sender: userId, // USER BUBBLE
       createdAt: serverTimestamp(),
       type: "text",
     });
@@ -46,10 +53,10 @@ function Chat() {
   return (
     <div className="chat-container">
 
-      {/* Top Header */}
+      {/* Header */}
       <div className="chat-header">
         <button className="back-btn">←</button>
-        <h3>Message</h3>
+        <h3>Customer Support</h3>
         <div className="header-right">
           <span>English ▾</span>
           <span className="volume-icon">🔊</span>
@@ -59,12 +66,12 @@ function Chat() {
       {/* Messages */}
       <div className="chat-body">
         {messages.map((msg) => (
-          <ChatBubble key={msg.id} message={msg} />
+          <ChatBubble key={msg.id} message={msg} userId={userId} />
         ))}
         <div ref={dummy}></div>
       </div>
 
-      {/* Input Bar */}
+      {/* Input */}
       <form className="chat-input" onSubmit={sendMessage}>
         <button type="button" className="attach-btn">📎</button>
 
@@ -80,16 +87,12 @@ function Chat() {
   );
 }
 
-function ChatBubble({ message }) {
-  const isAdmin = message.sender === "admin";
+function ChatBubble({ message, userId }) {
+  const isUser = message.sender === userId;
 
   return (
-    <div
-      className={`bubble-row ${isAdmin ? "right" : "left"}`}
-    >
-      <div
-        className={`bubble ${isAdmin ? "blue" : "grey"}`}
-      >
+    <div className={`bubble-row ${isUser ? "right" : "left"}`}>
+      <div className={`bubble ${isUser ? "blue" : "grey"}`}>
         {message.type === "image" ? (
           <img src={message.url} alt="sent" className="bubble-img" />
         ) : (
@@ -101,4 +104,3 @@ function ChatBubble({ message }) {
 }
 
 export default Chat;
-
