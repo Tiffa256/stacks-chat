@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { ref, onValue } from "firebase/database";
 import { db } from "../firebase";
+import { useNavigate } from "react-router-dom";
 import "./admin.css";
 
 export default function AdminMessages() {
   const [messages, setMessages] = useState([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const messagesRef = ref(db, "messages");
@@ -22,12 +24,20 @@ export default function AdminMessages() {
         ...value,
       }));
 
-      // Sort: newest first
+      // Sort newest first
       list.sort((a, b) => b.createdAt - a.createdAt);
 
       setMessages(list);
     });
   }, []);
+
+  // When clicking a row
+  const openChat = (msg) => {
+    const userId =
+      msg.sender !== "admin" ? msg.sender : msg.to || "unknown";
+
+    navigate(`/admin/chat/${userId}`);
+  };
 
   return (
     <div className="admin-container">
@@ -48,7 +58,11 @@ export default function AdminMessages() {
 
           <tbody>
             {messages.map((msg) => (
-              <tr key={msg.id}>
+              <tr
+                key={msg.id}
+                onClick={() => openChat(msg)}
+                style={{ cursor: "pointer" }}
+              >
                 <td>{msg.sender || "unknown"}</td>
                 <td>{msg.text}</td>
                 <td>{msg.type}</td>
