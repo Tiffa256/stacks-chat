@@ -10,7 +10,7 @@ import Chat from "./Chat";
 import AdminDashboard from "./admin/AdminDashboard";
 import AdminUsers from "./admin/AdminUsers";
 import AdminMessages from "./admin/AdminMessages";
-import AdminChat from "./admin/AdminChat";
+import AdminChat from "./admin/AdminChat"; // <-- new
 
 import "./App.css";
 
@@ -40,12 +40,14 @@ function App() {
           element={isAdmin ? <AdminMessages /> : <Navigate to="/" />}
         />
 
-        {/* NEW: Admin Chat Page */}
+        {/* Single admin chat with a user */}
         <Route
           path="/admin/chat/:userId"
           element={isAdmin ? <AdminChat /> : <Navigate to="/" />}
         />
 
+        {/* fallback */}
+        <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </Router>
   );
