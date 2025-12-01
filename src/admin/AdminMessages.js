@@ -1,3 +1,4 @@
+// src/admin/AdminMessages.jsx
 import React, { useEffect, useState } from "react";
 import { ref, onValue } from "firebase/database";
 import { db } from "../firebase";
@@ -5,7 +6,7 @@ import { useNavigate } from "react-router-dom";
 import "./admin.css";
 
 export default function AdminMessages() {
-  const [messages, setMessages] = useState([]);
+  const [users, setUsers] = useState([]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -13,72 +14,68 @@ export default function AdminMessages() {
 
     onValue(messagesRef, (snapshot) => {
       const data = snapshot.val();
-
       if (!data) {
-        setMessages([]);
+        setUsers([]);
         return;
       }
 
-      const list = Object.entries(data).map(([id, value]) => ({
-        id,
-        ...value,
-      }));
+      const userList = Object.entries(data).map(([userId, msgs]) => {
+        const msgArray = Object.entries(msgs).map(([id, value]) => ({
+          id,
+          ...value,
+        }));
 
-      // Sort newest first
-      list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        // Sort messages for this user
+        msgArray.sort((a, b) => b.createdAt - a.createdAt);
 
-      setMessages(list);
+        return {
+          userId,
+          latestMessage: msgArray[0], // newest msg per user
+        };
+      });
+
+      // Sort users by newest message
+      userList.sort(
+        (a, b) => b.latestMessage.createdAt - a.latestMessage.createdAt
+      );
+
+      setUsers(userList);
     });
   }, []);
 
-  // Handle navigating to a specific chat
-  const openChat = (msg) => {
-    let userId = "unknown";
-
-    // If the message is from a user → open their chat
-    if (msg.sender && msg.sender !== "admin") {
-      userId = msg.sender;
-    }
-
-    // If the message is from admin → open the recipient (msg.to)
-    if (msg.sender === "admin" && msg.to) {
-      userId = msg.to;
-    }
-
+  const openChat = (userId) => {
     navigate(`/admin/chat/${userId}`);
   };
 
   return (
     <div className="admin-container">
-      <h1 className="admin-title">All Messages</h1>
+      <h1 className="admin-title">Messages by Users</h1>
 
-      {messages.length === 0 ? (
+      {users.length === 0 ? (
         <p>No messages found.</p>
       ) : (
         <table className="admin-table">
           <thead>
             <tr>
+              <th>User ID</th>
+              <th>Last Message</th>
               <th>Sender</th>
-              <th>Message</th>
-              <th>Type</th>
               <th>Time</th>
             </tr>
           </thead>
 
           <tbody>
-            {messages.map((msg) => (
+            {users.map(({ userId, latestMessage }) => (
               <tr
-                key={msg.id}
-                onClick={() => openChat(msg)}
+                key={userId}
+                onClick={() => openChat(userId)}
                 style={{ cursor: "pointer" }}
               >
-                <td>{msg.sender || "unknown"}</td>
-                <td>{msg.text || "(empty)"}</td>
-                <td>{msg.type || "text"}</td>
+                <td>{userId}</td>
+                <td>{latestMessage.text}</td>
+                <td>{latestMessage.sender}</td>
                 <td>
-                  {msg.createdAt
-                    ? new Date(msg.createdAt).toLocaleString()
-                    : "—"}
+                  {new Date(latestMessage.createdAt).toLocaleString()}
                 </td>
               </tr>
             ))}
