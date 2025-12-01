@@ -1,7 +1,8 @@
+// src/admin/AdminUsers.js
+// Build admin user list directly from the "messages" root in Realtime DB.
+// No Firestore required.
 import React, { useEffect, useState } from "react";
-import { collection, getDocs } from "firebase/firestore";
 import { ref, onValue } from "firebase/database";
-import { db as realtimeDB } from "../firebase";
 import { db } from "../firebase";
 import { useNavigate } from "react-router-dom";
 import "./admin.css";
@@ -11,45 +12,48 @@ export default function AdminUsers() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const loadUsers = async () => {
-      try {
-        const snapshot = await getDocs(collection(db, "users"));
-        const list = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data()
-        }));
+    const messagesRef = ref(db, "messages");
 
-        // ALSO load last message for each user from Realtime DB
-        list.forEach((user) => {
-          const msgRef = ref(realtimeDB, `messages/${user.id}`);
-
-          onValue(msgRef, (snapshot) => {
-            const data = snapshot.val();
-            if (!data) {
-              user.lastMessage = "No messages";
-              user.lastSender = "-";
-              user.lastTime = "-";
-              setUsers([...list]);
-              return;
-            }
-
-            const array = Object.values(data);
-            array.sort((a, b) => b.createdAt - a.createdAt);
-            const last = array[0];
-
-            user.lastMessage = last.text || "No text";
-            user.lastSender = last.sender || "unknown";
-            user.lastTime = new Date(last.createdAt).toLocaleString();
-
-            setUsers([...list]);
-          });
-        });
-      } catch (error) {
-        console.error("Error loading users:", error);
+    const off = onValue(messagesRef, (snapshot) => {
+      const data = snapshot.val();
+      if (!data) {
+        setUsers([]);
+        return;
       }
-    };
 
-    loadUsers();
+      const list = Object.entries(data)
+        .map(([userId, msgs]) => {
+          if (!msgs) return null;
+          const msgArray = Object.entries(msgs).map(([id, value]) => ({
+            id,
+            ...value,
+          }));
+          // newest first
+          msgArray.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+          const latest = msgArray[0] || {};
+
+          return {
+            id: userId,
+            lastMessage: latest.text || "No text",
+            lastSender: latest.sender || "unknown",
+            lastTime: latest.createdAt
+              ? new Date(latest.createdAt).toLocaleString()
+              : "No time",
+          };
+        })
+        .filter(Boolean);
+
+      // sort by most recent
+      list.sort((a, b) => {
+        const ta = a.lastTime ? new Date(a.lastTime).getTime() : 0;
+        const tb = b.lastTime ? new Date(b.lastTime).getTime() : 0;
+        return tb - ta;
+      });
+
+      setUsers(list);
+    });
+
+    return () => off();
   }, []);
 
   const openChat = (userId) => {
