@@ -1,1 +1,26 @@
+.admin-container {
+  padding: 40px;
+  text-align: center;
+}
+
+.admin-title {
+  font-size: 32px;
+  font-weight: bold;
+  margin-bottom: 40px;
+}
+
+.admin-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+}
+
+.admin-btn {
+  background: black;
+  color: white;
+  padding: 15px 25px;
+  text-decoration: none;
+  border-radius: 8px;
+  font-size: 18px;
+}
 
