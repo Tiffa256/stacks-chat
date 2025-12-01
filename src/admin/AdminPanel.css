@@ -1,0 +1,79 @@
+/* src/admin/AdminPanel.css - combined styles for sidebar, list, chat and composer */
+
+:root{
+  --sidebar-bg: #f6f7fb;
+  --sidebar-width: 320px;
+  --primary: #0b7bdb;
+  --muted: #7b7f86;
+  --accent: #10a37f;
+  --admin-header-bg: #225e51;
+  --admin-msg-green: #dff4e9;
+}
+
+.admin-panel-root{ display:flex; height:100vh; background:#f2f4f7; font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; }
+
+/* Sidebar */
+.admin-sidebar{
+  width: var(--sidebar-width);
+  background: var(--sidebar-bg);
+  border-right: 1px solid rgba(0,0,0,0.06);
+  display:flex;
+  flex-direction:column;
+  padding: 12px;
+  box-sizing:border-box;
+}
+.sidebar-header{ padding:8px 6px; }
+.users-list{ margin-top:12px; overflow-y:auto; padding-right:6px; flex:1; }
+.no-users{ padding:20px; color:var(--muted); text-align:center; }
+
+/* Conversation list item */
+.user-list-item{ display:flex; align-items:center; justify-content:space-between; padding:10px; border-radius:8px; margin:6px 0; cursor:pointer; transition: background .12s ease; }
+.user-list-item:hover{ background: rgba(0,0,0,0.02); }
+.user-list-item.active{ background: rgba(11,123,219,0.06); }
+.user-left{ display:flex; gap:8px; align-items:center; min-width:0; }
+.avatar{ width:40px; height:40px; border-radius:8px; background:#e6eefb; display:flex; align-items:center; justify-content:center; color:var(--primary); font-weight:700; }
+.user-meta{ min-width:0; }
+.user-id{ font-weight:600; font-size:14px; color:#223; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:150px; }
+.last-msg{ color:var(--muted); font-size:13px; margin-top:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:200px; }
+.user-right{ display:flex; flex-direction:column; align-items:flex-end; gap:6px; }
+.time{ color:var(--muted); font-size:12px; }
+.badge{ background: var(--accent); color:white; padding:3px 6px; border-radius:12px; font-size:10px; }
+
+/* Main chat area */
+.admin-main{ flex:1; display:flex; flex-direction:column; min-width:0; }
+
+/* Chat header */
+.chat-header-admin{ display:flex; justify-content:space-between; align-items:center; padding:14px 18px; background: var(--admin-header-bg); color:white; }
+.chat-title{ font-size:16px; }
+.chat-sub{ font-size:12px; color: rgba(255,255,255,0.9); }
+
+/* chat body */
+.chat-body-admin{ flex:1; overflow-y:auto; padding:18px; background: linear-gradient(#f7f8fa, #f2f4f7); }
+
+/* message rows */
+.admin-msg-row{ display:flex; margin:8px 0; }
+.admin-msg-row.right{ justify-content:flex-end; }
+.admin-msg-row.left{ justify-content:flex-start; }
+.admin-msg-bubble{ max-width: 64%; padding:10px 14px; border-radius:12px; position:relative; box-shadow: 0 1px 0 rgba(0,0,0,0.03); }
+.admin-msg-bubble.user{ background: #fff; color:#222; border:1px solid rgba(0,0,0,0.03); }
+.admin-msg-bubble.admin{ background: var(--admin-msg-green); color:#0f5f43; }
+.msg-text{ white-space:pre-wrap; word-break:break-word; }
+.msg-time{ font-size:11px; color: rgba(0,0,0,0.45); margin-top:8px; text-align:right; }
+
+/* composer */
+.chat-composer{ display:flex; gap:8px; padding:12px; border-top:1px solid rgba(0,0,0,0.06); background:white; align-items:center; }
+.chat-composer textarea{ flex:1; resize:none; padding:10px; border-radius:10px; border:1px solid rgba(0,0,0,0.08); font-size:14px; height:44px; outline:none; }
+.send-btn-admin{ background:var(--primary); color:white; border:none; padding:10px 14px; border-radius:10px; cursor:pointer; min-width:86px; }
+.attach-btn{ background:transparent; border:none; cursor:pointer; font-size:18px; }
+
+/* empty / no msg */
+.empty-state, .no-msg{ padding:40px; color:var(--muted); text-align:center; }
+
+.conv-details{ padding:12px; background:white; border-left:1px solid rgba(0,0,0,0.04); }
+
+/* responsive */
+@media (max-width:880px){
+  .admin-panel-root{ flex-direction:column; height:auto; }
+  .admin-sidebar{ width:100%; border-right:none; border-bottom:1px solid rgba(0,0,0,0.06); }
+  .admin-main{ min-height: calc(100vh - 200px); }
+}
