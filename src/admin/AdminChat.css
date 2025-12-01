@@ -1,79 +1,75 @@
-.adminChatContainer {
+.admin-chat-wrapper {
+  height: 100vh;
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  background: #f0f0f0;
+  background: #f0f2f5;
 }
 
-/* Header */
-.chatHeader {
-  padding: 15px;
-  background: #075e54;
+.admin-chat-header {
+  background: #065f46;
   color: white;
-  font-size: 18px;
-  display: flex;
-  align-items: center;
+  padding: 15px;
+  text-align: center;
+  font-size: 22px;
+  font-weight: bold;
 }
 
-/* Chat Body */
-.chatBody {
+.admin-chat-body {
   flex: 1;
   overflow-y: auto;
   padding: 20px;
 }
 
-/* Bubbles */
-.chatBubble {
-  max-width: 65%;
+.bubble-left,
+.bubble-right {
+  max-width: 70%;
   padding: 12px;
-  margin-bottom: 12px;
-  border-radius: 12px;
-  position: relative;
-  font-size: 16px;
+  margin-bottom: 10px;
+  border-radius: 14px;
+  display: inline-block;
 }
 
-.chatBubble.user {
-  background: #ffffff;
-  align-self: flex-start;
-  border-radius: 12px 12px 12px 0;
+.bubble-left {
+  background: white;
+  color: black;
+  margin-right: auto;
 }
 
-.chatBubble.admin {
-  background: #dcf8c6;
-  align-self: flex-end;
-  border-radius: 12px 12px 0 12px;
+.bubble-right {
+  background: #0d9488;
+  color: white;
+  margin-left: auto;
 }
 
-/* Timestamps */
-.time {
+.bubble-time {
   font-size: 11px;
-  color: gray;
-  margin-top: 6px;
+  margin-top: 5px;
+  opacity: 0.7;
   text-align: right;
 }
 
-/* Input Box */
-.chatInput {
+.admin-chat-input {
   display: flex;
   padding: 10px;
   background: white;
-  border-top: 1px solid #ddd;
+  border-top: 1px solid #ccc;
 }
 
-.chatInput input {
+.admin-chat-input input {
   flex: 1;
   padding: 12px;
-  outline: none;
   border: 1px solid #ccc;
-  border-radius: 6px;
+  border-radius: 20px;
+  outline: none;
 }
 
-.chatInput button {
-  padding: 12px 20px;
-  margin-left: 10px;
-  background: #075e54;
-  border: none;
+.admin-chat-input button {
+  background: #0d9488;
   color: white;
-  border-radius: 6px;
+  padding: 12px 18px;
+  border: none;
+  border-radius: 20px;
+  margin-left: 10px;
   cursor: pointer;
+  font-weight: bold;
 }
