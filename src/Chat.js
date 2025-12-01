@@ -1,12 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import "./Chat.css";
 import { db } from "./firebase";
-import {
-  ref,
-  push,
-  onValue,
-  serverTimestamp,
-} from "firebase/database";
+import { ref, push, onValue } from "firebase/database";
 
 // Get user ID from URL
 function getUserId() {
@@ -15,18 +10,22 @@ function getUserId() {
 }
 
 function Chat() {
-  const userId = getUserId(); // ← VERY IMPORTANT
+  const userId = getUserId();
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
   const dummy = useRef();
 
   useEffect(() => {
-    const userChatRef = ref(db, `chats/${userId}`);
+    // IMPORTANT: SAME PATH AS ADMIN
+    const chatRef = ref(db, `messages/${userId}`);
 
-    onValue(userChatRef, (snapshot) => {
+    onValue(chatRef, (snapshot) => {
       const data = snapshot.val();
+
       const loaded = data
-        ? Object.keys(data).map((id) => ({ id, ...data[id] }))
+        ? Object.entries(data)
+            .map(([id, msg]) => ({ id, ...msg }))
+            .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))
         : [];
 
       setMessages(loaded);
@@ -38,12 +37,12 @@ function Chat() {
     e.preventDefault();
     if (!text.trim()) return;
 
-    const chatRef = ref(db, `chats/${userId}`);
+    const chatRef = ref(db, `messages/${userId}`);
 
     await push(chatRef, {
       text,
-      sender: userId, // USER BUBBLE
-      createdAt: serverTimestamp(),
+      sender: userId, // USER IDENTIFIER
+      createdAt: Date.now(),
       type: "text",
     });
 
@@ -52,7 +51,6 @@ function Chat() {
 
   return (
     <div className="chat-container">
-
       {/* Header */}
       <div className="chat-header">
         <button className="back-btn">←</button>
