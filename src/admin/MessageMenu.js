@@ -72,7 +72,13 @@ export default function MessageMenu({ onReply, onDelete, onDownload }) {
 
           <button
             style={{ display: "block", width: "100%", padding: "8px 10px", textAlign: "left", color: "#b03030", background: "transparent", border: "none", cursor: "pointer" }}
-            onClick={() => { setOpen(false); if (confirm("Delete this message?")) { onDelete && onDelete(); } }}
+            onClick={() => {
+              setOpen(false);
+              // use window.confirm (ESLint allows window.confirm; unscoped confirm is restricted)
+              if (window.confirm("Delete this message?")) {
+                onDelete && onDelete();
+              }
+            }}
           >
             Delete
           </button>
