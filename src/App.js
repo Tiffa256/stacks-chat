@@ -10,12 +10,12 @@ import Chat from "./Chat";
 import AdminDashboard from "./admin/AdminDashboard";
 import AdminUsers from "./admin/AdminUsers";
 import AdminMessages from "./admin/AdminMessages";
-import AdminChat from "./admin/AdminChat"; // <-- new
+import AdminChat from "./admin/AdminChat";
 
 import "./App.css";
 
-// TEMPORARY ADMIN CHECK (replace later with Firebase Admin logic)
-const isAdmin = true; // set to true while testing admin UI
+// TEMPORARY ADMIN CHECK
+const isAdmin = true; // while testing
 
 function App() {
   return (
@@ -40,14 +40,15 @@ function App() {
           element={isAdmin ? <AdminMessages /> : <Navigate to="/" />}
         />
 
-        {/* Single admin chat with a user */}
+        {/* Single admin chat */}
         <Route
           path="/admin/chat/:userId"
           element={isAdmin ? <AdminChat /> : <Navigate to="/" />}
         />
 
-        {/* fallback */}
+        {/* Fallback */}
         <Route path="*" element={<Navigate to="/" />} />
+
       </Routes>
     </Router>
   );
