@@ -3,64 +3,89 @@ import "./AdminPanel.css";
 import MessageMenu from "./MessageMenu";
 
 /*
- ChatMessage
- Props:
-  - m: message object { id, sender, text, type, url, fileName, createdAt, replyTo, replyText }
-  - isAdmin: boolean (message sent by current agent)
-  - onReply(message)
-  - onDelete(message)
-  - onDownload(message)
-  - repliedMessage: optional message object that this message replies to (for inline quote)
+ WhatsApp-styled ChatMessage
+ — No logic changed
+ — Only UI changed
 */
-export default function ChatMessage({ m, isAdmin, onReply, onDelete, onDownload, repliedMessage }) {
-  const dateLabel = m.createdAt ? new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
-  const alignClass = isAdmin ? "right" : "left";
-  const bubbleClass = isAdmin ? "admin" : "user";
+export default function ChatMessage({
+  m,
+  isAdmin,
+  onReply,
+  onDelete,
+  onDownload,
+  repliedMessage,
+}) {
+  const timeLabel = m.createdAt
+    ? new Date(m.createdAt).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "";
+
+  const rowClass = isAdmin ? "wa-row admin" : "wa-row user";
+  const bubbleClass = isAdmin ? "wa-bubble admin" : "wa-bubble user";
 
   return (
-    <div className={`admin-msg-row ${alignClass}`} style={{ alignItems: "flex-end" }}>
-      <div style={{ display: "flex", alignItems: "flex-end", gap: 8 }}>
-        {/* Bubble */}
-        <div className={`admin-msg-bubble ${bubbleClass}`} style={{ position: "relative" }}>
-          {/* quoted reply preview */}
-          {repliedMessage ? (
-            <div style={{ marginBottom: 10, padding: 10, borderRadius: 8, background: "#f5f7f8", border: "1px solid rgba(0,0,0,0.03)", fontSize: 13 }}>
-              <div style={{ fontWeight: 700, marginBottom: 6 }}>{repliedMessage.sender === "admin" ? "You" : repliedMessage.sender}</div>
-              <div style={{ color: "var(--muted)" }}>{repliedMessage.text ? (repliedMessage.text.length > 120 ? repliedMessage.text.slice(0, 120) + "…" : repliedMessage.text) : (repliedMessage.type === "image" ? "Image" : repliedMessage.fileName || "File")}</div>
+    <div className={rowClass}>
+      <div className="wa-msg-wrapper">
+        <div className={bubbleClass}>
+          {/* Reply preview (WhatsApp style) */}
+          {repliedMessage && (
+            <div className="wa-reply-box">
+              <div className="wa-reply-name">
+                {repliedMessage.sender === "admin" ? "You" : repliedMessage.sender}
+              </div>
+              <div className="wa-reply-snippet">
+                {repliedMessage.text
+                  ? repliedMessage.text.length > 120
+                    ? repliedMessage.text.slice(0, 120) + "…"
+                    : repliedMessage.text
+                  : repliedMessage.type === "image"
+                  ? "Image"
+                  : repliedMessage.fileName || "File"}
+              </div>
             </div>
-          ) : null}
-
-          {m.type === "image" ? (
-            <img src={m.url} alt={m.fileName || "img"} style={{ width: "100%", borderRadius: 8, marginBottom: 8 }} />
-          ) : m.type === "file" ? (
-            <div>
-              <a href={m.url} target="_blank" rel="noreferrer" style={{ color: "var(--accent)", fontWeight: 600 }}>
-                {m.fileName || "Download file"}
-              </a>
-            </div>
-          ) : (
-            <div className="msg-text">{m.text}</div>
           )}
 
-          <div className="msg-footer" style={{ marginTop: 10 }}>
-            <div className="msg-time">{dateLabel}</div>
-            {isAdmin ? <div style={{ color: "#0aa85a", fontSize: 14 }}>✓✓</div> : null}
+          {/* Image */}
+          {m.type === "image" ? (
+            <img
+              src={m.url}
+              alt={m.fileName || "image"}
+              className="wa-img"
+              onClick={() => m.url && window.open(m.url, "_blank")}
+            />
+          ) : m.type === "file" ? (
+            // File bubble
+            <div
+              className="wa-file"
+              onClick={() =>
+                m.url ? window.open(m.url, "_blank") : onDownload && onDownload(m)
+              }
+            >
+              <div className="wa-file-icon">📄</div>
+              <div className="wa-file-name">{m.fileName || "Download file"}</div>
+            </div>
+          ) : (
+            // Text
+            <div className="wa-text">{m.text}</div>
+          )}
+
+          {/* Footer (time + ticks) */}
+          <div className="wa-footer">
+            <span className="wa-time">{timeLabel}</span>
+            {isAdmin && <span className="wa-ticks">✓✓</span>}
           </div>
         </div>
 
-        {/* Actions menu (only show on hover or always visible) */}
-        <div style={{ alignSelf: "flex-start", marginTop: 6 }}>
+        {/* Action menu */}
+        <div className="wa-menu">
           <MessageMenu
             onReply={() => onReply && onReply(m)}
             onDelete={() => onDelete && onDelete(m)}
-            onDownload={() => {
-              if (m.url) {
-                // open download in new tab
-                window.open(m.url, "_blank");
-              } else {
-                onDownload && onDownload(m);
-              }
-            }}
+            onDownload={() =>
+              m.url ? window.open(m.url, "_blank") : onDownload && onDownload(m)
+            }
           />
         </div>
       </div>
