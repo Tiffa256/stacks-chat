@@ -1,5 +1,5 @@
 import React from "react";
-import "./AdminPanel.css";
+import "./AdminChat.css";
 import MessageMenu from "./MessageMenu";
 
 /*
