@@ -22,9 +22,7 @@ export function AdminProvider({ children }) {
     try {
       const saved = localStorage.getItem("stacks_admin_agentId");
       if (saved) return saved;
-      const generated = `agent_${Math.random()
-        .toString(36)
-        .slice(2, 8)}`;
+      const generated = `agent_${Math.random().toString(36).slice(2, 8)}`;
       localStorage.setItem("stacks_admin_agentId", generated);
       return generated;
     } catch {
@@ -74,7 +72,7 @@ export function AdminProvider({ children }) {
   }, [conversationsMap]);
 
   // =======================================
-  // SEND TEXT MESSAGE (Firebase only)
+  // SEND TEXT MESSAGE
   // =======================================
   async function sendTextMessage(userId, text) {
     if (!userId || !text || !text.trim()) return null;
@@ -83,17 +81,21 @@ export function AdminProvider({ children }) {
   }
 
   // =======================================
-  // SEND FILE MESSAGE (SUPABASE upload)
+  // SEND FILE MESSAGE (SUPABASE ONLY)
   // =======================================
   async function sendFileMessage(userId, file, opts = {}, onProgress) {
     if (!file || !userId) return;
 
     const filePath = `uploads/${Date.now()}_${file.name}`;
 
-    // Upload file to Supabase
-    const { data, error } = await supabase.storage
+    // Convert to array buffer (required by Supabase for Safari/Firefox)
+    const arrayBuffer = await file.arrayBuffer();
+
+    // Upload to Supabase
+    const { error } = await supabase.storage
       .from("public-files")
-      .upload(filePath, file, {
+      .upload(filePath, arrayBuffer, {
+        contentType: file.type,
         cacheControl: "3600",
         upsert: false,
       });
@@ -108,14 +110,15 @@ export function AdminProvider({ children }) {
       .from("public-files")
       .getPublicUrl(filePath);
 
-    const imageUrl = urlData.publicUrl;
+    const url = urlData.publicUrl;
 
-    // Save file message in Firebase
+    // Push message to Firebase with correct schema
     return pushMessage(userId, {
       sender: agentId,
-      type: "image",
-      imageUrl,
+      type: file.type.startsWith("image") ? "image" : "file",
+      url,              // CORRECT KEY — ChatMessage.js expects this
       fileName: file.name,
+      fileType: file.type,
       createdAt: Date.now(),
     });
   }
