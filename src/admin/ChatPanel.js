@@ -1,5 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
-import { subscribeToMessages, deleteMessage as firebaseDeleteMessage } from "../firebase";
+import {
+  subscribeToMessages,
+  deleteMessage as firebaseDeleteMessage,
+} from "../firebase";
 import { useAdmin } from "./AdminContext";
 import Composer from "./Composer";
 import "./AdminPanel.css";
@@ -7,16 +10,21 @@ import ChatMessage from "./ChatMessage";
 import DateSeparator from "./DateSeparator";
 
 /*
- ChatPanel updated:
- - Uses useAdmin().sendFileMessage for uploads and shows progress
- - Opens as page when URL contains /admin/chat/:userId (AdminApp sets activeConversation)
+ FIXES ADDED:
+ - Admin text messages now save to Firestore using sendTextMessage()
+ - Removed broken CustomEvent sender that saved NOTHING
+ - Ensures replies, files, and text all work
 */
 
 function formatDateHeader(ts) {
   if (!ts) return "";
   const d = new Date(ts);
   const today = new Date();
-  const dayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+  const dayStart = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate()
+  ).getTime();
   const yesterdayStart = dayStart - 24 * 60 * 60 * 1000;
 
   if (ts >= dayStart) return "Today";
@@ -25,7 +33,13 @@ function formatDateHeader(ts) {
 }
 
 export default function ChatPanel() {
-  const { activeConversation, agentId, sendFileMessage } = useAdmin();
+  const {
+    activeConversation,
+    agentId,
+    sendFileMessage,
+    sendTextMessage,
+  } = useAdmin();
+
   const [messages, setMessages] = useState([]);
   const [replyTo, setReplyTo] = useState(null);
   const [uploads, setUploads] = useState({});
@@ -39,18 +53,28 @@ export default function ChatPanel() {
     }
     const unsub = subscribeToMessages(activeConversation, (msgs) => {
       setMessages(msgs);
-      setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: "smooth" }), 60);
+      setTimeout(
+        () => scrollRef.current?.scrollIntoView({ behavior: "smooth" }),
+        60
+      );
     });
     return () => unsub && unsub();
   }, [activeConversation]);
 
-  const messageById = messages.reduce((acc, m) => { acc[m.id] = m; return acc; }, {});
+  const messageById = messages.reduce((acc, m) => {
+    acc[m.id] = m;
+    return acc;
+  }, {});
 
   const grouped = [];
   let lastDay = null;
   messages.forEach((m) => {
     const day = new Date(m.createdAt || 0);
-    const dayKey = new Date(day.getFullYear(), day.getMonth(), day.getDate()).getTime();
+    const dayKey = new Date(
+      day.getFullYear(),
+      day.getMonth(),
+      day.getDate()
+    ).getTime();
     if (lastDay !== dayKey) {
       grouped.push({ type: "date", ts: m.createdAt, key: `d-${dayKey}` });
       lastDay = dayKey;
@@ -58,35 +82,44 @@ export default function ChatPanel() {
     grouped.push({ type: "msg", msg: m, key: m.id });
   });
 
+  // 🔥 FIXED — Now actually sends message to Firestore
   const handleSendText = async (text) => {
     if (!activeConversation) return;
-    const payload = {
-      sender: agentId,
-      text,
-      type: "text",
-      createdAt: Date.now(),
-    };
-    if (replyTo) {
-      payload.replyTo = replyTo.id;
-      payload.replyText = replyTo.text || "";
-    }
+
     try {
-      const evt = new CustomEvent("admin-send-text", { detail: { text, replyTo } });
-      window.dispatchEvent(evt);
+      await sendTextMessage(
+        activeConversation,
+        {
+          text,
+          sender: agentId,
+          type: "text",
+        },
+        replyTo
+      );
     } catch (e) {
-      console.error("send failed", e);
+      console.error("Admin text send failed:", e);
+      alert("Failed to send message.");
     }
+
     setReplyTo(null);
   };
 
   const handleSendFile = async (file, onProgress) => {
     if (!activeConversation || !sendFileMessage) return;
     const tempId = `upload_${Date.now()}`;
-    setUploads((u) => ({ ...u, [tempId]: { name: file.name, progress: 0 } }));
+    setUploads((u) => ({
+      ...u,
+      [tempId]: { name: file.name, progress: 0 },
+    }));
+
     try {
       await sendFileMessage(activeConversation, file, {}, (percent) => {
-        setUploads((u) => ({ ...u, [tempId]: { name: file.name, progress: percent } }));
+        setUploads((u) => ({
+          ...u,
+          [tempId]: { name: file.name, progress: percent },
+        }));
       });
+
       setUploads((u) => {
         const next = { ...u };
         delete next[tempId];
@@ -120,13 +153,19 @@ export default function ChatPanel() {
     }
   };
 
-  if (!activeConversation) return <div className="empty-state">Select a conversation</div>;
+  if (!activeConversation)
+    return <div className="empty-state">Select a conversation</div>;
 
   return (
-    <div className="chat-panel" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+    <div
+      className="chat-panel"
+      style={{ display: "flex", flexDirection: "column", height: "100%" }}
+    >
       <div className="chat-header-admin">
         <div>
-          <div className="chat-title">Chat with <strong>{activeConversation}</strong></div>
+          <div className="chat-title">
+            Chat with <strong>{activeConversation}</strong>
+          </div>
           <div style={{ fontSize: 12, opacity: 0.8 }}>Admin: {agentId}</div>
         </div>
       </div>
@@ -158,10 +197,31 @@ export default function ChatPanel() {
 
         {Object.entries(uploads).map(([k, u]) => (
           <div key={k} style={{ alignSelf: "flex-end", marginTop: 8 }}>
-            <div style={{ padding: 10, borderRadius: 10, background: "#fff", width: 240 }}>
+            <div
+              style={{
+                padding: 10,
+                borderRadius: 10,
+                background: "#fff",
+                width: 240,
+              }}
+            >
               <div style={{ fontSize: 13, fontWeight: 700 }}>{u.name}</div>
-              <div style={{ height: 6, background: "#eee", borderRadius: 6, marginTop: 8 }}>
-                <div style={{ width: `${u.progress}%`, height: "100%", background: "var(--accent)", borderRadius: 6 }} />
+              <div
+                style={{
+                  height: 6,
+                  background: "#eee",
+                  borderRadius: 6,
+                  marginTop: 8,
+                }}
+              >
+                <div
+                  style={{
+                    width: `${u.progress}%`,
+                    height: "100%",
+                    background: "var(--accent)",
+                    borderRadius: 6,
+                  }}
+                />
               </div>
             </div>
           </div>
