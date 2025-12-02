@@ -13,7 +13,6 @@ import {
   onValue,
   off as dbOff,
   remove as dbRemove,
-  get as dbGet,
 } from "firebase/database";
 
 import { supabase } from "./supabaseClient";
@@ -27,7 +26,7 @@ const firebaseConfig = {
   databaseURL:
     "https://stacks-chat-b795c-default-rtdb.europe-west1.firebasedatabase.app",
   projectId: "stacks-chat-b795c",
-  storageBucket: "no-storage-used-here", // not used anymore
+  storageBucket: "not-used",
   messagingSenderId: "410462423292",
   appId: "1:410462423292:web:48dbeb3d6a5149952b2f79",
 };
@@ -47,31 +46,37 @@ export function buildTextMessage(sender, text) {
   };
 }
 
-export function buildFileMessage(sender, fileUrl, fileType, fileName) {
+export function buildFileMessage(sender, url, fileType, fileName) {
   return {
     sender,
-    fileUrl,
+    url,                 // 🔥 FIXED (previously fileUrl)
     fileType,
     fileName,
-    type: "image",
+    type: fileType.startsWith("image") ? "image" : "file", // 🔥 FIXED
     createdAt: Date.now(),
   };
 }
 
 // -------------------------------------------------------
-// 🔥 SEND TEXT MESSAGE
+// 🔥 SEND TEXT OR FILE MESSAGE
 // -------------------------------------------------------
 export async function pushMessage(userId, message) {
   if (!userId) throw new Error("Missing userId");
 
   const path = `messages/${userId}`;
-  const payload = { ...message, createdAt: Date.now() };
+  const payload = {
+    ...message,
+    createdAt: message.createdAt || Date.now(), // 🔥 FIXED
+  };
 
   const msgRef = await dbPush(dbRef(db, path), payload);
 
+  const preview =
+    payload.text ||
+    (payload.type === "image" ? "📷 Image" : "📎 File");
+
   await dbUpdate(dbRef(db, `meta/conversations/${userId}`), {
-    lastMessage:
-      payload.text || (payload.type === "image" ? "📷 Image" : "File"),
+    lastMessage: preview,
     lastSender: payload.sender,
     lastTimestamp: payload.createdAt,
     status: "open",
@@ -81,27 +86,21 @@ export async function pushMessage(userId, message) {
 }
 
 // -------------------------------------------------------
-// 📤 SEND IMAGE/FILE (Supabase Upload)
+// 📤 UPLOAD FILE VIA SUPABASE & SAVE MESSAGE
 // -------------------------------------------------------
-export async function pushMessageWithFile(
-  userId,
-  file,
-  { sender },
-  onProgress
-) {
+export async function pushMessageWithFile(userId, file, { sender }) {
   try {
     const timestamp = Date.now();
-    const fileName = `${timestamp}_${file.name}`;
-    const filePath = `uploads/${fileName}`;
+    const filePath = `uploads/${timestamp}_${file.name}`;
 
     // Upload to Supabase
-    const { data, error } = await supabase.storage
+    const { error } = await supabase.storage
       .from("public-files")
       .upload(filePath, file);
 
     if (error) {
       console.error("Supabase upload error:", error);
-      throw error;
+      return null;
     }
 
     // Public URL
@@ -109,14 +108,14 @@ export async function pushMessageWithFile(
       .from("public-files")
       .getPublicUrl(filePath);
 
-    const publicUrl = urlData.publicUrl;
+    const url = urlData.publicUrl;
 
-    // Save message to RTDB
-    const msg = buildFileMessage(sender, publicUrl, file.type, file.name);
+    // Create file message
+    const msg = buildFileMessage(sender, url, file.type, file.name);
 
     return pushMessage(userId, msg);
-  } catch (err) {
-    console.error("pushMessageWithFile ERROR:", err);
+  } catch (e) {
+    console.error("pushMessageWithFile ERROR:", e);
     return null;
   }
 }
@@ -126,12 +125,11 @@ export async function pushMessageWithFile(
 // -------------------------------------------------------
 export async function deleteMessage(userId, messageId) {
   if (!userId || !messageId) return;
-
   return dbRemove(dbRef(db, `messages/${userId}/${messageId}`));
 }
 
 // -------------------------------------------------------
-// SUBSCRIPTIONS & META
+// SUBSCRIPTIONS
 // -------------------------------------------------------
 export function subscribeToMessages(userId, onChange) {
   const r = dbRef(db, `messages/${userId}`);
@@ -141,7 +139,7 @@ export function subscribeToMessages(userId, onChange) {
 
     const arr = Object.entries(raw)
       .map(([id, v]) => ({ id, ...v }))
-      .sort((a, b) => a.createdAt - b.createdAt);
+      .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0)); // 🔥 FIXED
 
     onChange(arr);
   };
@@ -157,6 +155,9 @@ export function subscribeToConversationMeta(onChange) {
   return () => dbOff(r, "value", listener);
 }
 
+// -------------------------------------------------------
+// META CONTROLS
+// -------------------------------------------------------
 export function markConversationRead(userId, agentId) {
   return dbUpdate(dbRef(db, `meta/conversations/${userId}`), {
     unreadCount: 0,
