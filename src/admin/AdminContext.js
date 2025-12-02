@@ -22,11 +22,13 @@ export function AdminProvider({ children }) {
     try {
       const saved = localStorage.getItem("stacks_admin_agentId");
       if (saved) return saved;
-      const generated = `agent_${Math.random().toString(36).slice(2, 8)}`;
+
+      // 🔥 FIX: Use a constant agent name instead of random agent_xxx
+      const generated = "support_agent";
       localStorage.setItem("stacks_admin_agentId", generated);
       return generated;
     } catch {
-      return `agent_${Math.random().toString(36).slice(2, 8)}`;
+      return "support_agent";
     }
   });
 
@@ -72,7 +74,7 @@ export function AdminProvider({ children }) {
   }, [conversationsMap]);
 
   // ==================================================
-  // FIXED SEND TEXT MESSAGE — SUPPORTS OBJECT INPUT
+  // FIXED SEND TEXT MESSAGE
   // ==================================================
   async function sendTextMessage(userId, data, replyTo = null) {
     if (!userId) return null;
