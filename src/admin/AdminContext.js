@@ -72,14 +72,20 @@ export function AdminProvider({ children }) {
   }, [conversationsMap]);
 
   // ==================================================
-  // SEND TEXT MESSAGE — MATCHES AdminChat.js logic
+  // FIXED SEND TEXT MESSAGE — SUPPORTS OBJECT INPUT
   // ==================================================
-  async function sendTextMessage(userId, text) {
-    if (!userId || !text || !text.trim()) return null;
+  async function sendTextMessage(userId, data, replyTo = null) {
+    if (!userId) return null;
+    if (!data?.text || !data.text.trim()) return null;
 
-    const message = buildTextMessage(text.trim(), agentId);
+    const baseMessage = buildTextMessage(data.text.trim(), agentId);
 
-    return pushMessage(userId, message);
+    if (replyTo) {
+      baseMessage.replyTo = replyTo.id;
+      baseMessage.replyText = replyTo.text || "";
+    }
+
+    return pushMessage(userId, baseMessage);
   }
 
   // ==================================================
@@ -134,12 +140,7 @@ export function AdminProvider({ children }) {
 
   const value = {
     agentId,
-    setAgentId: (id) => {
-      setAgentId(id);
-      try {
-        localStorage.setItem("stacks_admin_agentId", id);
-      } catch {}
-    },
+    setAgentId,
     conversations,
     conversationsMap,
     activeConversation,
