@@ -28,7 +28,7 @@ export default function ChatPanel() {
   const { activeConversation, agentId, sendFileMessage } = useAdmin();
   const [messages, setMessages] = useState([]);
   const [replyTo, setReplyTo] = useState(null);
-  const [uploads, setUploads] = useState({}); // track upload progress by temp id
+  const [uploads, setUploads] = useState({});
   const scrollRef = useRef(null);
 
   useEffect(() => {
@@ -71,12 +71,6 @@ export default function ChatPanel() {
       payload.replyText = replyTo.text || "";
     }
     try {
-      // use firebase push via AdminContext (sendTextMessage in AdminContext calls pushMessage)
-      // Using pushMessage directly is acceptable but we rely on AdminContext for meta updates normally
-      // Here we just set replyTo to null after sending; AdminContext already pushes meta
-      // (AdminContext exposes sendTextMessage; but we call pushMessage via imported helper or AdminContext)
-      // Simpler: use pushMessage by importing it if needed (left as previously implemented).
-      // We'll keep sending via AdminContext's push from earlier file flow by firing a custom event:
       const evt = new CustomEvent("admin-send-text", { detail: { text, replyTo } });
       window.dispatchEvent(evt);
     } catch (e) {
@@ -87,14 +81,12 @@ export default function ChatPanel() {
 
   const handleSendFile = async (file, onProgress) => {
     if (!activeConversation || !sendFileMessage) return;
-    // create a temporary key for upload UI
     const tempId = `upload_${Date.now()}`;
     setUploads((u) => ({ ...u, [tempId]: { name: file.name, progress: 0 } }));
     try {
       await sendFileMessage(activeConversation, file, {}, (percent) => {
         setUploads((u) => ({ ...u, [tempId]: { name: file.name, progress: percent } }));
       });
-      // remove upload entry after completion
       setUploads((u) => {
         const next = { ...u };
         delete next[tempId];
@@ -164,7 +156,6 @@ export default function ChatPanel() {
           })
         )}
 
-        {/* show upload progress items */}
         {Object.entries(uploads).map(([k, u]) => (
           <div key={k} style={{ alignSelf: "flex-end", marginTop: 8 }}>
             <div style={{ padding: 10, borderRadius: 10, background: "#fff", width: 240 }}>
