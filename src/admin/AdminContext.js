@@ -49,7 +49,6 @@ export function AdminProvider({ children }) {
     };
   }, [agentId]);
 
-  // Listen to conversation metadata
   useEffect(() => {
     const unsubscribe = subscribeToConversationMeta((metaObj) => {
       setConversationsMap(metaObj || {});
@@ -73,18 +72,12 @@ export function AdminProvider({ children }) {
   }, [conversationsMap]);
 
   // ==================================================
-  // SEND TEXT MESSAGE — MATCHES ADMINCHAT.JS
+  // SEND TEXT MESSAGE — MATCHES AdminChat.js logic
   // ==================================================
   async function sendTextMessage(userId, text) {
     if (!userId || !text || !text.trim()) return null;
 
-    // Build a Firebase-friendly message object
-    const message = {
-      sender: agentId,
-      type: "text",
-      text: text.trim(),
-      createdAt: Date.now(),
-    };
+    const message = buildTextMessage(text.trim(), agentId);
 
     return pushMessage(userId, message);
   }
@@ -96,7 +89,6 @@ export function AdminProvider({ children }) {
     if (!file || !userId) return;
 
     const filePath = `uploads/${Date.now()}_${file.name}`;
-
     const arrayBuffer = await file.arrayBuffer();
 
     const { error } = await supabase.storage
@@ -118,7 +110,6 @@ export function AdminProvider({ children }) {
 
     const url = urlData.publicUrl;
 
-    // Message format expected by ChatMessage.js
     const msg = {
       sender: agentId,
       type: file.type.startsWith("image") ? "image" : "file",
@@ -131,9 +122,6 @@ export function AdminProvider({ children }) {
     return pushMessage(userId, msg);
   }
 
-  // ==================================================
-  // TYPING + READ STATUS
-  // ==================================================
   function setTypingForActive(isTyping) {
     if (!activeConversation || !agentId) return;
     return setTyping(activeConversation, agentId, !!isTyping);
