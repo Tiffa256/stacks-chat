@@ -1,20 +1,26 @@
 // src/admin/AdminChat.js
 import React, { useEffect, useRef, useState } from "react";
-import { ref, onValue, push, off } from "firebase/database";
+import { ref, onValue, off } from "firebase/database";
 import { db } from "../firebase";
 import "./AdminChat.css";
 import { useParams } from "react-router-dom";
-import { supabase } from "../supabaseClient";
+import { useAdmin } from "../context/AdminContext";
 
 export default function AdminChat({ userId: propUserId }) {
   const params = useParams();
   const userId = propUserId || params?.userId;
+
+  // ← use AdminContext functions
+  const { sendTextMessage, sendFileMessage, agentId } = useAdmin();
 
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
   const [file, setFile] = useState(null);
   const bottomRef = useRef(null);
 
+  // ----------------------------------------------------
+  // Load messages from Firebase
+  // ----------------------------------------------------
   useEffect(() => {
     if (!userId) return;
 
@@ -38,56 +44,26 @@ export default function AdminChat({ userId: propUserId }) {
       }, 50);
     });
 
-    // FIXED CLEANUP:
     return () => off(messagesRef);
-
   }, [userId]);
 
-  const sendMessage = async () => {
+  // ----------------------------------------------------
+  // SEND TEXT — USE AdminContext
+  // ----------------------------------------------------
+  const handleSendText = async () => {
     if (!text.trim() || !userId) return;
 
-    const msgRef = ref(db, `messages/${userId}`);
-
-    await push(msgRef, {
-      sender: "admin",
-      text,
-      createdAt: Date.now(),
-      type: "text",
-    });
-
+    await sendTextMessage(userId, text.trim());
     setText("");
   };
 
-  const sendFile = async () => {
+  // ----------------------------------------------------
+  // SEND FILE — USE AdminContext
+  // ----------------------------------------------------
+  const handleSendFile = async () => {
     if (!file || !userId) return;
 
-    const filePath = `uploads/${Date.now()}_${file.name}`;
-
-    const { error } = await supabase.storage
-      .from("public-files")
-      .upload(filePath, file, {
-        cacheControl: "3600",
-        upsert: false,
-      });
-
-    if (error) {
-      alert("Upload failed: " + error.message);
-      return;
-    }
-
-    const { data: urlData } = supabase.storage
-      .from("public-files")
-      .getPublicUrl(filePath);
-
-    const imageUrl = urlData.publicUrl;
-
-    const msgRef = ref(db, `messages/${userId}`);
-    await push(msgRef, {
-      sender: "admin",
-      imageUrl,
-      createdAt: Date.now(),
-      type: "image",
-    });
+    await sendFileMessage(userId, file);
 
     setFile(null);
     document.getElementById("adminFileInput").value = "";
@@ -103,18 +79,19 @@ export default function AdminChat({ userId: propUserId }) {
         {messages.map((msg) => (
           <div
             key={msg.id}
-            className={msg.sender === "admin" ? "bubble-right" : "bubble-left"}
+            className={msg.sender === agentId ? "bubble-right" : "bubble-left"}
           >
             {msg.type === "image" ? (
               <img
-                src={msg.imageUrl}
-                alt="uploaded"
+                src={msg.url || msg.imageUrl}
+                alt="upload"
                 className="chat-image"
                 style={{ maxWidth: "200px", borderRadius: "8px" }}
               />
             ) : (
               <div className="bubble-text">{msg.text}</div>
             )}
+
             <div className="bubble-time">
               {new Date(msg.createdAt || 0).toLocaleTimeString()}
             </div>
@@ -130,10 +107,10 @@ export default function AdminChat({ userId: propUserId }) {
           placeholder="Type message..."
           value={text}
           onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+          onKeyDown={(e) => e.key === "Enter" && handleSendText()}
         />
 
-        <button onClick={sendMessage}>Send</button>
+        <button onClick={handleSendText}>Send</button>
 
         <input
           id="adminFileInput"
@@ -141,7 +118,7 @@ export default function AdminChat({ userId: propUserId }) {
           onChange={(e) => setFile(e.target.files[0])}
         />
 
-        <button onClick={sendFile}>Upload</button>
+        <button onClick={handleSendFile}>Upload</button>
       </div>
     </div>
   );
