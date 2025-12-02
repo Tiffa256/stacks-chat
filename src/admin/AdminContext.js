@@ -1,13 +1,19 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import {
   pushMessage,
-  pushMessageWithFile,
   subscribeToConversationMeta,
   markConversationRead,
   setTyping,
   setPresence,
   buildTextMessage,
 } from "../firebase";
+import { supabase } from "../supabaseClient";
 
 const AdminContext = createContext(null);
 
@@ -16,7 +22,9 @@ export function AdminProvider({ children }) {
     try {
       const saved = localStorage.getItem("stacks_admin_agentId");
       if (saved) return saved;
-      const generated = `agent_${Math.random().toString(36).slice(2, 8)}`;
+      const generated = `agent_${Math.random()
+        .toString(36)
+        .slice(2, 8)}`;
       localStorage.setItem("stacks_admin_agentId", generated);
       return generated;
     } catch {
@@ -29,7 +37,6 @@ export function AdminProvider({ children }) {
 
   useEffect(() => {
     if (!activeConversation) return;
-    console.log("[AdminContext] activeConversation changed ->", activeConversation);
     markConversationRead(activeConversation, agentId).catch(() => {});
   }, [activeConversation, agentId]);
 
@@ -66,14 +73,51 @@ export function AdminProvider({ children }) {
       .sort((a, b) => (b.lastTimestamp || 0) - (a.lastTimestamp || 0));
   }, [conversationsMap]);
 
+  // =======================================
+  // SEND TEXT MESSAGE (Firebase only)
+  // =======================================
   async function sendTextMessage(userId, text) {
     if (!userId || !text || !text.trim()) return null;
     const msg = buildTextMessage(agentId, text.trim());
     return pushMessage(userId, msg);
   }
 
+  // =======================================
+  // SEND FILE MESSAGE (SUPABASE upload)
+  // =======================================
   async function sendFileMessage(userId, file, opts = {}, onProgress) {
-    return pushMessageWithFile(userId, file, { ...opts, sender: agentId }, onProgress);
+    if (!file || !userId) return;
+
+    const filePath = `uploads/${Date.now()}_${file.name}`;
+
+    // Upload file to Supabase
+    const { data, error } = await supabase.storage
+      .from("public-files")
+      .upload(filePath, file, {
+        cacheControl: "3600",
+        upsert: false,
+      });
+
+    if (error) {
+      console.error("Supabase upload error:", error);
+      return null;
+    }
+
+    // Get public URL
+    const { data: urlData } = supabase.storage
+      .from("public-files")
+      .getPublicUrl(filePath);
+
+    const imageUrl = urlData.publicUrl;
+
+    // Save file message in Firebase
+    return pushMessage(userId, {
+      sender: agentId,
+      type: "image",
+      imageUrl,
+      fileName: file.name,
+      createdAt: Date.now(),
+    });
   }
 
   function setTypingForActive(isTyping) {
@@ -104,7 +148,11 @@ export function AdminProvider({ children }) {
     markActiveRead,
   };
 
-  return <AdminContext.Provider value={value}>{children}</AdminContext.Provider>;
+  return (
+    <AdminContext.Provider value={value}>
+      {children}
+    </AdminContext.Provider>
+  );
 }
 
 export function useAdmin() {
