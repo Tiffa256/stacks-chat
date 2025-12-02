@@ -22,6 +22,9 @@ exports.handler = async function (event, context) {
     const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
     const uploadPreset = process.env.CLOUDINARY_UPLOAD_PRESET;
 
+    // Add debug logging for cloudName and uploadPreset
+    console.log("cloudName:", cloudName, "uploadPreset:", uploadPreset);
+
     if (!cloudName || !uploadPreset) {
       return { statusCode: 500, body: "Missing Cloudinary config" };
     }
