@@ -35,9 +35,9 @@ const app = initializeApp(firebaseConfig);
 export const db = getDatabase(app);
 
 // -------------------------------------------------------
-// HELPERS
+// HELPERS (🔥 FIXED ONLY THIS)
 // -------------------------------------------------------
-export function buildTextMessage(sender, text) {
+export function buildTextMessage(text, sender) {
   return {
     sender,
     text,
@@ -49,10 +49,10 @@ export function buildTextMessage(sender, text) {
 export function buildFileMessage(sender, url, fileType, fileName) {
   return {
     sender,
-    url,                 // 🔥 FIXED (previously fileUrl)
+    url,
     fileType,
     fileName,
-    type: fileType.startsWith("image") ? "image" : "file", // 🔥 FIXED
+    type: fileType.startsWith("image") ? "image" : "file",
     createdAt: Date.now(),
   };
 }
@@ -66,7 +66,7 @@ export async function pushMessage(userId, message) {
   const path = `messages/${userId}`;
   const payload = {
     ...message,
-    createdAt: message.createdAt || Date.now(), // 🔥 FIXED
+    createdAt: message.createdAt || Date.now(),
   };
 
   const msgRef = await dbPush(dbRef(db, path), payload);
@@ -93,7 +93,6 @@ export async function pushMessageWithFile(userId, file, { sender }) {
     const timestamp = Date.now();
     const filePath = `uploads/${timestamp}_${file.name}`;
 
-    // Upload to Supabase
     const { error } = await supabase.storage
       .from("public-files")
       .upload(filePath, file);
@@ -103,14 +102,12 @@ export async function pushMessageWithFile(userId, file, { sender }) {
       return null;
     }
 
-    // Public URL
     const { data: urlData } = supabase.storage
       .from("public-files")
       .getPublicUrl(filePath);
 
     const url = urlData.publicUrl;
 
-    // Create file message
     const msg = buildFileMessage(sender, url, file.type, file.name);
 
     return pushMessage(userId, msg);
@@ -139,7 +136,7 @@ export function subscribeToMessages(userId, onChange) {
 
     const arr = Object.entries(raw)
       .map(([id, v]) => ({ id, ...v }))
-      .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0)); // 🔥 FIXED
+      .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
 
     onChange(arr);
   };
