@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { ref, onValue, push } from "firebase/database";
 import { db } from "../firebase";
 import "./Admin.css";
@@ -16,12 +16,37 @@ export default function AdminChat({ userId: propUserId }) {
   const bodyRef = useRef(null);
   const fileInputRef = useRef(null);
 
+  const isAtBottomRef = useRef(true);
+  const [showJump, setShowJump] = useState(false);
+
+  const scrollToBottom = useCallback((behavior = "smooth") => {
+    const el = bodyRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+    bottomRef.current?.scrollIntoView({ behavior });
+    isAtBottomRef.current = true;
+    setShowJump(false);
+  }, []);
+
+  useEffect(() => {
+    const el = bodyRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      const threshold = 120;
+      const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight <= threshold;
+      isAtBottomRef.current = atBottom;
+      setShowJump(!atBottom);
+    };
+    el.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => el.removeEventListener("scroll", onScroll);
+  }, []);
+
   useEffect(() => {
     if (!userId) return;
 
     const messagesRef = ref(db, `messages/${userId}`);
 
-    // onValue returns an unsubscribe function
     const unsubscribe = onValue(messagesRef, (snapshot) => {
       const data = snapshot.val();
       if (!data) {
@@ -35,14 +60,18 @@ export default function AdminChat({ userId: propUserId }) {
 
       setMessages(msgArray);
 
-      // allow small delay for DOM update then scroll
+      // allow small delay for DOM update then scroll if user is at bottom
       setTimeout(() => {
-        if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
-        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+        if (isAtBottomRef.current) {
+          if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
+          bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+          setShowJump(false);
+        } else {
+          setShowJump(true);
+        }
       }, 60);
     });
 
-    // cleanup using unsubscribe returned by onValue
     return () => {
       if (typeof unsubscribe === "function") unsubscribe();
     };
@@ -109,59 +138,74 @@ export default function AdminChat({ userId: propUserId }) {
       </div>
 
       <div className="adminchat-body" ref={bodyRef}>
-        {messages.map((msg) => {
-          const isAdmin = msg.sender === "admin";
-          return (
-            <div
-              key={msg.id}
-              className={isAdmin ? "row-admin" : "row-user"}
-            >
-              <div className="bubble-wrapper">
-                {/* Show avatar on the left for user messages */}
-                {!isAdmin && (
-                  <div className="user-avatar online" title={msg.sender || "User"}>
-                    {(msg.sender || "U").charAt(0)}
-                  </div>
-                )}
+        <div style={{ width: "100%", display: "flex", justifyContent: "center" }}>
+          <div className="messages-inner" style={{ width: "100%", maxWidth: 720 }}>
+            {messages.map((msg) => {
+              const isAdmin = msg.sender === "admin";
+              return (
+                <div key={msg.id} className={isAdmin ? "row-admin" : "row-user"}>
+                  <div className="bubble-wrapper">
+                    {!isAdmin && (
+                      <div className="user-avatar online" title={msg.sender || "User"}>
+                        {(msg.sender || "U").charAt(0)}
+                      </div>
+                    )}
 
-                <div className={isAdmin ? "chat-bubble bubble-right" : "chat-bubble bubble-left"}>
-                  {msg.type === "image" ? (
-                    <img
-                      src={msg.imageUrl || msg.url}
-                      alt="upload"
-                      className="bubble-img"
-                      onClick={() =>
-                        (msg.imageUrl || msg.url) && window.open(msg.imageUrl || msg.url, "_blank")
-                      }
-                    />
-                  ) : (
-                    <div className="bubble-text">{msg.text}</div>
-                  )}
+                    <div className={isAdmin ? "chat-bubble bubble-right" : "chat-bubble bubble-left"}>
+                      {msg.type === "image" ? (
+                        <img
+                          src={msg.imageUrl || msg.url}
+                          alt="upload"
+                          className="bubble-img"
+                          onClick={() =>
+                            (msg.imageUrl || msg.url) && window.open(msg.imageUrl || msg.url, "_blank")
+                          }
+                        />
+                      ) : (
+                        <div className="bubble-text">{msg.text}</div>
+                      )}
 
-                  <div className="bubble-footer">
-                    <div className="bubble-time">
-                      {new Date(msg.createdAt || 0).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                      <div className="bubble-footer">
+                        <div className="bubble-time">
+                          {new Date(msg.createdAt || 0).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </div>
+                      </div>
                     </div>
-                    {/* ticks or status could go here (e.g. ✓✓) */}
                   </div>
                 </div>
+              );
+            })}
 
-                {/* Optionally show admin avatar on right (commented for now)
-                {isAdmin && (
-                  <div className="user-avatar" style={{ marginLeft: 8 }}>
-                    A
-                  </div>
-                )} */}
-              </div>
-            </div>
-          );
-        })}
-
-        <div ref={bottomRef} />
+            <div ref={bottomRef} />
+          </div>
+        </div>
       </div>
+
+      {/* Jump to latest button */}
+      {showJump && (
+        <button
+          onClick={() => scrollToBottom("smooth")}
+          aria-label="Jump to latest"
+          style={{
+            position: "fixed",
+            right: 24,
+            bottom: 96,
+            zIndex: 60,
+            background: "linear-gradient(180deg,#6b63ff,#5348e6)",
+            color: "#fff",
+            border: "none",
+            padding: "8px 12px",
+            borderRadius: 12,
+            boxShadow: "0 8px 20px rgba(83,72,230,0.12)",
+            cursor: "pointer",
+          }}
+        >
+          Jump to latest
+        </button>
+      )}
 
       <div className="adminchat-inputbar">
         <label className="file-btn" title="Attach file" style={{ cursor: "pointer" }}>
