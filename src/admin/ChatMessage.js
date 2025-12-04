@@ -1,6 +1,7 @@
 import React from "react";
 import "./Admin.css";
 import MessageMenu from "./MessageMenu";
+import Avatar from "./Avatar";
 
 export default function ChatMessage({
   m,
@@ -19,11 +20,19 @@ export default function ChatMessage({
 
   // use both row and bubble naming so CSS covers all
   const rowClass = isAdmin ? "row-admin" : "row-user";
-  const bubbleClass = isAdmin ? "bubble-admin" : "bubble-user";
+  // use chat-bubble + directional classes so visuals match Admin.css
+  const bubbleClass = isAdmin ? "chat-bubble bubble-right" : "chat-bubble bubble-left";
 
   return (
     <div className={rowClass}>
       <div className="bubble-wrapper">
+        {/* avatar on the left for user messages (purely presentational) */}
+        {!isAdmin && (
+          <div className="user-avatar" title={m.sender || "User"}>
+            <Avatar seed={m.sender || "U"} />
+          </div>
+        )}
+
         <div className={bubbleClass}>
           {/* Reply preview */}
           {repliedMessage && (
