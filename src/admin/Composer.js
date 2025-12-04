@@ -12,11 +12,10 @@ import "./Admin.css";
 */
 export default function Composer({ onSendText, onSendFile, onTyping, replyTo, onCancelReply }) {
   const [text, setText] = useState("");
-  const [preview, setPreview] = useState(null);
   const fileRef = useRef();
 
   useEffect(() => {
-    // clear text when replyTo changes (optional)
+    // keep logic unchanged; placeholder for future UX
   }, [replyTo]);
 
   const handleSubmit = async (e) => {
@@ -36,22 +35,32 @@ export default function Composer({ onSendText, onSendFile, onTyping, replyTo, on
   };
 
   return (
-    <form className="chat-composer" onSubmit={handleSubmit}>
+    <form className="chat-composer" onSubmit={handleSubmit} style={{ display: "flex", gap: 12, alignItems: "center", width: "100%" }}>
       <input type="file" ref={fileRef} style={{ display: "none" }} onChange={handleFileChange} />
-      <button type="button" className="attach-btn" onClick={() => fileRef.current.click()}>📎</button>
+      <button type="button" className="file-btn" onClick={() => fileRef.current.click()} title="Attach file">📎</button>
 
       <div style={{ flex: 1 }}>
         {replyTo ? (
-          <div style={{ marginBottom: 8 }}>
-            <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 6 }}>Replying to <strong>{replyTo.sender === "admin" ? "You" : replyTo.sender}</strong></div>
-            <div style={{ padding: 10, borderRadius: 8, background: "#f6f7f8", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div style={{ color: "var(--muted)" }}>{replyTo.text ? (replyTo.text.length > 140 ? replyTo.text.slice(0, 140) + "…" : replyTo.text) : (replyTo.type === "image" ? "Image" : replyTo.fileName || "File")}</div>
-              <button type="button" onClick={() => onCancelReply && onCancelReply()} style={{ marginLeft: 12, border: "none", background: "transparent", color: "var(--muted)", cursor: "pointer" }}>✕</button>
+          <div className="reply-box" style={{ marginBottom: 8 }}>
+            <div className="reply-name">
+              Replying to <strong>{replyTo.sender === "admin" ? "You" : replyTo.sender}</strong>
             </div>
+            <div className="reply-snippet" style={{ marginTop: 6 }}>
+              {replyTo.text ? (replyTo.text.length > 140 ? replyTo.text.slice(0, 140) + "…" : replyTo.text) : (replyTo.type === "image" ? "Image" : replyTo.fileName || "File")}
+            </div>
+            <button
+              type="button"
+              onClick={() => onCancelReply && onCancelReply()}
+              style={{ marginLeft: 12, border: "none", background: "transparent", color: "var(--muted)", cursor: "pointer" }}
+              aria-label="Cancel reply"
+            >
+              ✕
+            </button>
           </div>
         ) : null}
 
         <textarea
+          className="message-input"
           placeholder="Type a message..."
           value={text}
           onChange={(e) => { setText(e.target.value); onTyping && onTyping(true); }}
@@ -62,10 +71,11 @@ export default function Composer({ onSendText, onSendFile, onTyping, replyTo, on
               onTyping && onTyping(false);
             }
           }}
+          style={{ width: "100%", minHeight: 44, resize: "vertical", padding: 12, borderRadius: 12, border: "none", background: "transparent", color: "inherit" }}
         />
       </div>
 
-      <button type="submit" className="send-btn-admin">Send</button>
+      <button type="submit" className="send-btn" aria-label="Send message">Send</button>
     </form>
   );
 }
