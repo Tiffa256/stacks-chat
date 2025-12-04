@@ -1,7 +1,7 @@
 // src/admin/AdminDashboard.js
 import React from "react";
 import { Link } from "react-router-dom";
-import "./admin.css";
+import "./Admin.css";
 
 export default function AdminDashboard() {
   return (
