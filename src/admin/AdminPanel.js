@@ -6,6 +6,11 @@ import AdminChat from "./AdminChat";
 import "./Admin.css";
 import { db } from "../firebase";
 
+function formatTime(ts) {
+  if (!ts) return "";
+  return new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
 function AdminPanel() {
   const [users, setUsers] = useState([]);
   const [activeUser, setActiveUser] = useState(null);
@@ -13,7 +18,7 @@ function AdminPanel() {
   useEffect(() => {
     const messagesRef = ref(db, "messages");
 
-    const off = onValue(messagesRef, (snapshot) => {
+    const unsubscribe = onValue(messagesRef, (snapshot) => {
       const data = snapshot.val();
       if (!data) {
         setUsers([]);
@@ -27,12 +32,13 @@ function AdminPanel() {
             id: k,
             ...v,
           }));
+          // newest first
           msgArray.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
           const lastMsg = msgArray[0];
 
           return {
             userId,
-            lastMessage: lastMsg?.text || "Image",
+            lastMessage: lastMsg ? (lastMsg.type === "image" ? "Image" : lastMsg.text || "") : "",
             lastTimestamp: lastMsg?.createdAt || 0,
           };
         })
@@ -43,8 +49,17 @@ function AdminPanel() {
       setUsers(userList);
     });
 
-    return () => off();
+    return () => {
+      if (typeof unsubscribe === "function") unsubscribe();
+    };
   }, []);
+
+  // set default active user when users change (pick most recent)
+  useEffect(() => {
+    if (!activeUser && users.length > 0) {
+      setActiveUser(users[0].userId);
+    }
+  }, [users, activeUser]);
 
   return (
     <div className="admin-container">
@@ -52,14 +67,32 @@ function AdminPanel() {
       <div className="admin-users">
         <h2 className="admin-title">Users</h2>
 
+        {users.length === 0 && <div className="no-msg">No conversations yet</div>}
+
         {users.map((u) => (
           <div
             key={u.userId}
             className={`user-item ${activeUser === u.userId ? "active" : ""}`}
             onClick={() => setActiveUser(u.userId)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => e.key === "Enter" && setActiveUser(u.userId)}
           >
-            <strong>{u.userId}</strong>
-            <p className="last-msg">{u.lastMessage}</p>
+            <div className="user-left">
+              <div className="user-avatar" title={u.userId}>
+                {u.userId?.charAt(0)?.toUpperCase() || "U"}
+              </div>
+
+              <div className="user-meta">
+                <div className="user-id">{u.userId}</div>
+                <div className="last-msg">{u.lastMessage}</div>
+              </div>
+            </div>
+
+            <div className="user-right">
+              <div className="time">{formatTime(u.lastTimestamp)}</div>
+              {/* badge placeholder (if you have unread counts, render inside .badge) */}
+            </div>
           </div>
         ))}
       </div>
