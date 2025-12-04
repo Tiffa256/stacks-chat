@@ -1,6 +1,6 @@
 import React from "react";
 import { useAdmin } from "./AdminContext";
-import "./AdminPanel.css";
+import "./Admin.css";
 
 /*
  ConversationDetails - polished right-side panel
