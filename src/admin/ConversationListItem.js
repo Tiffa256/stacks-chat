@@ -42,23 +42,27 @@ export default function ConversationListItem({ user, active }) {
       onKeyDown={(e) => e.key === "Enter" && handleClick()}
     >
       {/* LEFT SIDE: Avatar + User info */}
-      <div className="user-avatar">
-        <Avatar seed={user.userId} />
-      </div>
+      <div className="user-left">
+        <div className="user-avatar" title={user.userId}>
+          <Avatar seed={user.userId} />
+        </div>
 
-      <div className="user-meta">
-        <div className="user-id">{user.userId}</div>
-        <div className="user-last">
-          {user.lastMessage || "No message yet"}
+        <div className="user-meta">
+          <div className="user-id">{user.userId}</div>
+          <div className="last-msg">
+            {user.lastMessage || "No message yet"}
+          </div>
         </div>
       </div>
 
       {/* RIGHT SIDE: Time + Unread bubble */}
-      <div className="user-time">
-        {timeLabel}
+      <div className="user-right">
+        <div className="time">{timeLabel}</div>
 
         {isUnread && (
-          <span className="user-unread">{user.unreadCount}</span>
+          <div className="badge" aria-label={`${user.unreadCount} unread`}>
+            {user.unreadCount}
+          </div>
         )}
       </div>
     </div>
