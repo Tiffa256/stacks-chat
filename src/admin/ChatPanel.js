@@ -37,6 +37,7 @@ export default function ChatPanel() {
   const [replyTo, setReplyTo] = useState(null);
   const [uploads, setUploads] = useState({});
   const scrollRef = useRef(null);
+  const bodyRef = useRef(null);
 
   useEffect(() => {
     if (!activeConversation) {
@@ -46,10 +47,11 @@ export default function ChatPanel() {
     }
     const unsub = subscribeToMessages(activeConversation, (msgs) => {
       setMessages(msgs);
-      setTimeout(
-        () => scrollRef.current?.scrollIntoView({ behavior: "smooth" }),
-        60
-      );
+      setTimeout(() => {
+        // smooth but reliable scroll to bottom
+        if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
+        scrollRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 80);
     });
     return () => unsub && unsub();
   }, [activeConversation]);
@@ -78,15 +80,20 @@ export default function ChatPanel() {
   const handleSendText = async (text) => {
     if (!activeConversation) return;
 
-    await sendTextMessage(
-      activeConversation,
-      {
-        text,
-        sender: agentId,
-        type: "text",
-      },
-      replyTo
-    );
+    try {
+      await sendTextMessage(
+        activeConversation,
+        {
+          text,
+          sender: agentId,
+          type: "text",
+        },
+        replyTo
+      );
+    } catch (e) {
+      console.error("Admin text send failed:", e);
+      alert("Failed to send message.");
+    }
 
     setReplyTo(null);
   };
@@ -99,28 +106,40 @@ export default function ChatPanel() {
       [tempId]: { name: file.name, progress: 0 },
     }));
 
-    await sendFileMessage(activeConversation, file, {}, (percent) => {
-      setUploads((u) => ({
-        ...u,
-        [tempId]: { name: file.name, progress: percent },
-      }));
-    });
-
-    setUploads((u) => {
-      const next = { ...u };
-      delete next[tempId];
-      return next;
-    });
+    try {
+      await sendFileMessage(activeConversation, file, {}, (percent) => {
+        setUploads((u) => ({
+          ...u,
+          [tempId]: { name: file.name, progress: percent },
+        }));
+      });
+    } catch (err) {
+      console.error("upload failed", err);
+      alert("Upload failed");
+    } finally {
+      setUploads((u) => {
+        const next = { ...u };
+        delete next[tempId];
+        return next;
+      });
+    }
   };
 
   const handleReply = (message) => {
     setReplyTo(message);
+    const el = document.querySelector(".message-input, textarea");
+    if (el) el.focus();
   };
 
   const handleDelete = async (message) => {
     if (!activeConversation || !message?.id) return;
-    await firebaseDeleteMessage(activeConversation, message.id);
-    setMessages((prev) => prev.filter((m) => m.id !== message.id));
+    try {
+      await firebaseDeleteMessage(activeConversation, message.id);
+      setMessages((prev) => prev.filter((m) => m.id !== message.id));
+    } catch (e) {
+      console.error("delete failed", e);
+      alert("Failed to delete message");
+    }
   };
 
   if (!activeConversation)
@@ -129,13 +148,15 @@ export default function ChatPanel() {
   return (
     <div className="admin-chat">
       <div className="adminchat-header">
-        <div className="chat-title">
-          Chat with <strong>{activeConversation}</strong>
+        <div className="adminchat-header-info">
+          <div className="adminchat-header-name">
+            Chat with <strong>{activeConversation}</strong>
+          </div>
+          <div className="adminchat-header-status">Admin: {agentId}</div>
         </div>
-        <div className="chat-sub">Admin: {agentId}</div>
       </div>
 
-      <div className="adminchat-body">
+      <div className="adminchat-body" ref={bodyRef}>
         {grouped.length === 0 ? (
           <div className="no-msg">No messages yet</div>
         ) : (
