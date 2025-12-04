@@ -1,267 +1,314 @@
-/* -----------------------------------------------------------
-   GLOBAL ADMIN LAYOUT — Dark Modern Theme
------------------------------------------------------------ */
+/* ==========================================================
+   Admin.css — Dark Modern Theme (comprehensive)
+   Supports bubble-left/right, bubble-admin/user, row-admin/user
+   ========================================================== */
 
-* {
-  box-sizing: border-box;
+:root{
+  --bg-0: #0f1116;
+  --bg-1: #12141a;
+  --panel: #0e1116;
+  --muted: #8f98ad;
+  --text: #e6e9ef;
+  --accent: #4c7cff;
+  --accent-600: #3a63d6;
+  --incoming: #222630;
+  --outgoing: #2f5ef0;
+  --incoming-contrast: #dce6ff;
+  --radius-lg: 16px;
+  --radius-md: 12px;
+  --glass: rgba(255,255,255,0.03);
 }
 
-body {
-  font-family: "Inter", sans-serif;
-  background: #1c1f2b;
-  margin: 0;
-  color: #e6e9ef;
+/* ---------- Global ---------- */
+*{box-sizing:border-box}
+body,html,#root{height:100%}
+body{
+  margin:0;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  background:var(--bg-0);
+  color:var(--text);
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
 }
 
-.admin-container {
-  display: flex;
-  height: 100vh;
-  overflow: hidden;
-  background: #1c1f2b;
+/* ---------- Layout root ---------- */
+.admin-container{
+  display:flex;
+  height:100vh;
+  width:100%;
+  overflow:hidden;
+  gap:0;
+  background: linear-gradient(180deg, rgba(12,14,20,0.9), rgba(10,11,15,0.98));
 }
 
-/* -----------------------------------------------------------
-   LEFT SIDEBAR (User list)
------------------------------------------------------------ */
-
-.admin-users {
-  width: 320px;
-  background: #11131c;
-  padding: 20px;
-  border-right: 1px solid #202431;
-  overflow-y: auto;
+/* ---------- Left Sidebar (conversations) ---------- */
+.admin-users{
+  width:320px;
+  background:linear-gradient(180deg, #0e1014, #0b0c10);
+  border-right:1px solid rgba(255,255,255,0.03);
+  padding:18px;
+  overflow-y:auto;
 }
 
-.admin-title {
-  font-size: 20px;
-  font-weight: 700;
-  padding-bottom: 10px;
-  margin-bottom: 20px;
-  border-bottom: 1px solid #202431;
-  color: #e8ebf3;
+.sidebar-header{
+  padding-bottom:10px;
+  margin-bottom:8px;
+  border-bottom:1px solid rgba(255,255,255,0.02);
 }
 
-/* User Row */
-.user-item {
-  background: #181b26;
-  padding: 14px 16px;
-  margin-bottom: 12px;
-  border-radius: 14px;
-  cursor: pointer;
-  transition: 0.2s;
-  border: 1px solid transparent;
+.admin-title, .sidebar-header h2{
+  margin:0;
+  font-size:18px;
+  color:var(--text);
+  font-weight:700;
 }
 
-.user-item:hover {
-  background: #1f2331;
+/* Conversation list items (ConversationListItem or simple user-item) */
+.user-list-item,
+.user-item{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:12px;
+  border-radius:12px;
+  background:transparent;
+  transition: all 0.12s ease;
+  cursor:pointer;
 }
 
-.user-item.active {
-  background: #263056;
-  border: 1px solid #4c7cff;
+.user-list-item:hover,
+.user-item:hover{ background:rgba(255,255,255,0.02); transform:translateY(-1px) }
+
+.user-list-item.active,
+.user-item.active{
+  background: linear-gradient(90deg, rgba(76,124,255,0.10), rgba(76,124,255,0.06));
+  border-left:4px solid var(--accent);
+  padding-left:10px;
 }
 
-.last-msg {
-  font-size: 13px;
-  color: #9aa0b3;
-  margin-top: 5px;
+.user-left{ display:flex; align-items:center; gap:12px; min-width:0; flex:1 }
+.user-avatar{
+  width:44px; height:44px; border-radius:50%;
+  background:var(--accent);
+  color:white; display:flex; align-items:center; justify-content:center;
+  font-weight:700; font-size:16px; flex:0 0 44px;
+  box-shadow: 0 4px 18px rgba(76,124,255,0.08);
 }
 
-/* Avatar circle from your current layout */
-.user-avatar {
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  background: #4c7cff;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 600;
-  margin-right: 12px;
+.user-meta{ min-width:0; overflow:hidden }
+.user-id{ font-weight:700; font-size:14px; color:var(--text); white-space:nowrap; text-overflow:ellipsis; overflow:hidden }
+.last-msg{ font-size:13px; color:var(--muted); margin-top:6px; white-space:nowrap; text-overflow:ellipsis; overflow:hidden; }
+
+/* right area of list item */
+.user-right{ display:flex; align-items:flex-start; flex-direction:column; gap:6px; justify-content:center; flex:0 0 auto }
+.time{ font-size:12px; color:var(--muted) }
+.badge{
+  background:var(--accent);
+  color:white;
+  min-width:22px; height:22px;
+  display:inline-flex; align-items:center; justify-content:center;
+  border-radius:999px; font-size:12px; padding:0 6px;
+  box-shadow: 0 4px 12px rgba(76,124,255,0.12);
 }
 
-/* -----------------------------------------------------------
-   RIGHT CHAT AREA
------------------------------------------------------------ */
-
-.admin-chat {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  background: #1c1f2b;
+/* ---------- Main chat area ---------- */
+.admin-chat{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  background: linear-gradient(180deg, rgba(5,6,8,0.3), rgba(8,9,12,0.6));
+  min-width:0;
 }
 
-/* -----------------------------------------------------------
-   CHAT HEADER
------------------------------------------------------------ */
+/* chat header */
+.adminchat-header{
+  display:flex;
+  gap:14px;
+  align-items:center;
+  padding:16px 20px;
+  background: linear-gradient(180deg, rgba(10,11,14,0.6), rgba(6,7,9,0.6));
+  border-bottom:1px solid rgba(255,255,255,0.02);
+  backdrop-filter: blur(6px);
+}
+.adminchat-header-avatar{ width:48px; height:48px; border-radius:50%; background:var(--accent); color:#fff; display:flex;align-items:center;justify-content:center;font-weight:700 }
+.adminchat-header-info{ display:flex; flex-direction:column }
+.adminchat-header-name{ font-size:16px; font-weight:700; color:var(--text) }
+.adminchat-header-status{ font-size:13px; color:var(--muted) }
 
-.adminchat-header {
-  padding: 18px 25px;
-  background: #11131c;
-  border-bottom: 1px solid #202431;
-  display: flex;
-  align-items: center;
-  gap: 16px;
+/* chat body */
+.adminchat-body{
+  flex:1;
+  padding:28px 36px;
+  overflow-y:auto;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
 }
 
-.adminchat-header-avatar {
-  width: 46px;
-  height: 46px;
-  border-radius: 50%;
-  background: #4c7cff;
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 22px;
-  font-weight: 600;
+/* date separator */
+.date-sep{
+  align-self:center;
+  background: rgba(255,255,255,0.03);
+  color:var(--muted);
+  padding:6px 12px;
+  border-radius:999px;
+  font-size:13px;
+  margin:18px 0;
 }
 
-.adminchat-header-info {
-  display: flex;
-  flex-direction: column;
+/* ---------- Message rows — left/right alignment ---------- */
+/* support row-admin/row-user and generic msg-row */
+.row-admin, .admin-row, .msg-row.admin { display:flex; justify-content:flex-end; margin-bottom:8px; }
+.row-user, .user-row, .msg-row.user { display:flex; justify-content:flex-start; margin-bottom:8px; }
+
+/* wrapper for bubble + menu */
+.bubble-wrapper, .wa-msg-wrapper, .wa-msg{ display:flex; align-items:flex-end; gap:8px; max-width:100% }
+
+/* ---------- Bubbles — multiple names supported ---------- */
+/* generic chat-bubble used by AdminChat older component */
+.chat-bubble, .bubble-user, .bubble-admin, .bubble-left, .bubble-right, .wa-bubble {
+  display:inline-block;
+  padding:12px 16px;
+  border-radius: var(--radius-lg);
+  max-width:70%;
+  word-break:break-word;
+  box-shadow: 0 6px 20px rgba(2,6,23,0.5);
+  font-size:15px;
+  line-height:1.4;
 }
 
-.adminchat-header-name {
-  font-size: 18px;
-  font-weight: 600;
+/* incoming / left */
+.chat-bubble.bubble-left,
+.bubble-left,
+.bubble-user,
+.wa-bubble.user,
+.bubble-incoming,
+.wa-bubble.user {
+  background: linear-gradient(180deg, #10131a, #161923);
+  color:var(--text);
+  border-top-left-radius:6px;
+  border-top-right-radius: var(--radius-lg);
+  align-self:flex-start;
 }
 
-.adminchat-header-status {
-  font-size: 13px;
-  color: #6ddf83;
+/* outgoing / right (admin) */
+.chat-bubble.bubble-right,
+.bubble-right,
+.bubble-admin,
+.wa-bubble.admin,
+.bubble-outgoing {
+  background: linear-gradient(180deg, var(--outgoing), #3a63d6);
+  color:white;
+  border-top-right-radius:6px;
+  border-top-left-radius: var(--radius-lg);
+  align-self:flex-end;
+  box-shadow: 0 10px 30px rgba(49,86,255,0.14);
 }
 
-/* -----------------------------------------------------------
-   CHAT BODY
------------------------------------------------------------ */
-
-.adminchat-body {
-  flex: 1;
-  padding: 30px 35px;
-  overflow-y: auto;
-  background: #1c1f2b;
+/* text inside bubble */
+.bubble-text, .wa-text {
+  color:inherit;
+  font-size:15px;
+  white-space:pre-wrap;
 }
 
-/* -----------------------------------------------------------
-   MESSAGE BUBBLES (Modern Rounded)
------------------------------------------------------------ */
+/* reply preview inside bubble */
+.reply-box, .wa-reply-box {
+  border-left:4px solid rgba(255,255,255,0.06);
+  background: rgba(255,255,255,0.02);
+  padding:8px 10px;
+  margin-bottom:8px;
+  border-radius:8px;
+}
+.reply-name, .wa-reply-name { font-weight:700; font-size:13px; color:var(--text); margin-bottom:4px }
+.reply-snippet, .wa-reply-snippet { font-size:13px; color:var(--muted) }
 
-.chat-bubble {
-  max-width: 70%;
-  padding: 14px 18px;
-  border-radius: 18px;
-  margin-bottom: 22px;
-  position: relative;
-  font-size: 15px;
-  line-height: 1.5;
+/* image in bubble */
+.bubble-img, .chat-image, .wa-img {
+  width:300px;
+  max-width:100%;
+  border-radius:12px;
+  display:block;
+  margin-bottom:8px;
+  border: 3px solid rgba(76,124,255,0.12);
+  cursor:pointer;
 }
 
-/* Incoming (user) */
-.bubble-left {
-  background: #262b3a;
-  color: #e6e9ef;
-  border-top-left-radius: 4px;
+/* file bubble */
+.bubble-file, .wa-file {
+  background: rgba(255,255,255,0.02);
+  padding:10px;
+  border-radius:10px;
+  display:flex;
+  gap:10px;
+  align-items:center;
+  cursor:pointer;
+}
+.file-icon{ font-size:20px }
+.file-name{ font-weight:700 }
+
+/* bubble footer (time + ticks) */
+.bubble-footer, .wa-footer {
+  display:flex;
+  gap:8px;
+  justify-content:flex-end;
+  align-items:center;
+  margin-top:6px;
+  font-size:12px;
+  color:var(--muted);
+}
+.bubble-time, .wa-time { font-size:12px; color:var(--muted) }
+.bubble-ticks, .wa-ticks { color: rgba(255,255,255,0.9); font-size:13px }
+
+/* action menu wrapper */
+.bubble-menu, .wa-menu { margin-bottom:6px; align-self:flex-end }
+
+/* ---------- Uploads (progress) ---------- */
+.upload-bubble {
+  align-self:flex-end;
+  background:linear-gradient(180deg, #111318, #14161b);
+  padding:12px;
+  border-radius:12px;
+  width:280px;
+  margin-top:8px;
+}
+.upload-name{ font-weight:700; color:var(--text) }
+.upload-bar{ height:8px; background:rgba(255,255,255,0.04); border-radius:8px; margin-top:8px; overflow:hidden }
+.upload-bar-fill{ height:100%; background:var(--accent); border-radius:8px }
+
+/* ---------- Composer / Input Bar ---------- */
+.adminchat-inputbar{
+  padding:12px 18px;
+  border-top:1px solid rgba(255,255,255,0.02);
+  background: linear-gradient(180deg, rgba(4,5,8,0.6), rgba(8,9,12,0.6));
+  display:flex; gap:12px; align-items:center;
+}
+.message-input{
+  flex:1;
+  padding:12px 14px;
+  border-radius:12px;
+  background: rgba(255,255,255,0.03);
+  border:1px solid rgba(255,255,255,0.03);
+  color:var(--text);
+  font-size:15px;
+  outline:none;
+}
+.message-input::placeholder{ color:rgba(255,255,255,0.35) }
+.file-btn{ color:var(--muted); font-size:20px; cursor:pointer }
+.send-btn{
+  background:linear-gradient(180deg,var(--accent),var(--accent-600));
+  color:white; padding:10px 16px; border-radius:12px;
+  border:none; cursor:pointer; font-weight:700;
 }
 
-/* Outgoing (admin) */
-.bubble-right {
-  background: #4c7cff;
-  color: white;
-  margin-left: auto;
-  border-top-right-radius: 4px;
-}
+/* ---------- Empty / misc ---------- */
+.empty-state{ display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:18px; height:100% }
+.no-msg{ color:var(--muted); padding:8px 12px }
 
-/* Timestamp */
-.bubble-time {
-  font-size: 11px;
-  margin-top: 6px;
-  color: #c3c8d4;
-  text-align: right;
-}
-
-/* -----------------------------------------------------------
-   CHAT IMAGES (Modern Glowing Border)
------------------------------------------------------------ */
-
-.chat-image {
-  width: 270px;
-  max-width: 100%;
-  border-radius: 16px;
-  display: block;
-  margin-bottom: 6px;
-  border: 3px solid rgba(76, 124, 255, 0.5);
-}
-
-/* -----------------------------------------------------------
-   INPUT BAR
------------------------------------------------------------ */
-
-.adminchat-inputbar {
-  background: #11131c;
-  padding: 16px 22px;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  border-top: 1px solid #202431;
-}
-
-.message-input {
-  flex: 1;
-  padding: 14px 16px;
-  border-radius: 16px;
-  border: 1px solid #303549;
-  background: #1c1f2b;
-  color: white;
-  font-size: 15px;
-}
-
-.message-input::placeholder {
-  color: #8b91a3;
-}
-
-.message-input:focus {
-  outline: none;
-  border-color: #4c7cff;
-}
-
-/* Attachment icon */
-.file-btn {
-  font-size: 24px;
-  cursor: pointer;
-  color: #aab0c3;
-}
-
-.file-btn:hover {
-  color: #dce2f5;
-}
-
-/* Send button */
-.send-btn {
-  background: #4c7cff;
-  color: white;
-  padding: 10px 18px;
-  border: none;
-  border-radius: 12px;
-  font-size: 16px;
-  cursor: pointer;
-  transition: 0.2s;
-}
-
-.send-btn:hover {
-  background: #3a63d6;
-}
-
-/* -----------------------------------------------------------
-   EMPTY STATE
------------------------------------------------------------ */
-
-.empty-state {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 20px;
-  color: #8f96aa;
+/* ---------- Responsive ---------- */
+@media (max-width:900px){
+  .admin-users{ width:260px }
+  .adminchat-body{ padding:18px }
+  .bubble-img{ width:220px }
 }
