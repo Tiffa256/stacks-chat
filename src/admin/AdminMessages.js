@@ -41,6 +41,8 @@ export default function AdminMessages() {
               text: latest.text || "",
               sender: latest.sender || "unknown",
               createdAt: latest.createdAt || 0,
+              type: latest.type,
+              fileName: latest.fileName,
             },
           };
         })
@@ -60,46 +62,62 @@ export default function AdminMessages() {
   }, []);
 
   const openChat = (userId) => {
-    navigate(`/admin/chat/${userId}`);
+    navigate(`/admin/chat/${encodeURIComponent(userId)}`);
   };
 
+  if (users.length === 0) {
+    return (
+      <div className="admin-users" style={{ padding: 12 }}>
+        <h2 className="admin-title">Messages</h2>
+        <div className="no-msg">No messages found.</div>
+      </div>
+    );
+  }
+
   return (
-    <div className="admin-container">
-      <h1 className="admin-title">Messages</h1>
+    <div className="admin-users" style={{ padding: 12 }}>
+      <h2 className="admin-title">Messages</h2>
 
-      {users.length === 0 ? (
-        <p>No messages found.</p>
-      ) : (
-        <table className="admin-table">
-          <thead>
-            <tr>
-              <th>User ID</th>
-              <th>Last Message</th>
-              <th>Sender</th>
-              <th>Time</th>
-            </tr>
-          </thead>
+      <div className="users-list" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {users.map(({ userId, latestMessage }) => {
+          const preview =
+            latestMessage.type === "image"
+              ? "Image"
+              : latestMessage.type === "file"
+              ? latestMessage.fileName || "File"
+              : latestMessage.text || "No message";
 
-          <tbody>
-            {users.map(({ userId, latestMessage }) => (
-              <tr
-                key={userId}
-                onClick={() => openChat(userId)}
-                style={{ cursor: "pointer" }}
-              >
-                <td>{userId}</td>
-                <td>{latestMessage.text}</td>
-                <td>{latestMessage.sender}</td>
-                <td>
-                  {latestMessage.createdAt
-                    ? new Date(latestMessage.createdAt).toLocaleString()
-                    : "No time"}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+          const timeLabel = latestMessage.createdAt
+            ? new Date(latestMessage.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+            : "";
+
+          return (
+            <div
+              key={userId}
+              className="user-item"
+              onClick={() => openChat(userId)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => e.key === "Enter" && openChat(userId)}
+            >
+              <div className="user-left">
+                <div className="user-avatar" title={userId}>
+                  {userId?.charAt(0)?.toUpperCase() || "U"}
+                </div>
+
+                <div className="user-meta">
+                  <div className="user-id">{userId}</div>
+                  <div className="last-msg">{preview}</div>
+                </div>
+              </div>
+
+              <div className="user-right">
+                <div className="time">{timeLabel}</div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
