@@ -5,25 +5,17 @@ import "./Admin.css";
 import { ref as dbRef, onValue } from "firebase/database";
 import { db } from "../firebase";
 
-/*
- ConversationsPanel
- - Prefer meta/conversations (via useAdmin().conversations)
- - If meta is empty, fall back to scanning messages/ to build a list
-*/
-
 export default function ConversationsPanel() {
   const { conversations, activeConversation, setActiveConversation } = useAdmin();
   const [fallbackList, setFallbackList] = useState(null);
   const [loadingFallback, setLoadingFallback] = useState(false);
 
   useEffect(() => {
-    // If we already have conversations from meta, no need to watch messages root
     if (conversations && conversations.length > 0) {
       setFallbackList(null);
       return;
     }
 
-    // Otherwise, subscribe to messages/ and build a minimal list
     setLoadingFallback(true);
     const messagesRef = dbRef(db, "messages");
     const off = onValue(messagesRef, (snap) => {
@@ -61,13 +53,13 @@ export default function ConversationsPanel() {
       } catch (e) {}
       off && off();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversations]);
 
-  const listToRender = (conversations && conversations.length > 0) ? conversations : (fallbackList || []);
+  const listToRender =
+    conversations && conversations.length > 0 ? conversations : fallbackList || [];
 
   return (
-    <aside className="admin-sidebar">
+    <div className="admin-users">
       <div className="sidebar-header">
         <h2>Conversations</h2>
       </div>
@@ -94,6 +86,6 @@ export default function ConversationsPanel() {
           ))
         )}
       </div>
-    </aside>
+    </div>
   );
 }
