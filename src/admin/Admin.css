@@ -1,13 +1,23 @@
 /* -----------------------------------------------------------
-   GLOBAL ADMIN LAYOUT
+   GLOBAL ADMIN LAYOUT — Dark Modern Theme
 ----------------------------------------------------------- */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Inter", sans-serif;
+  background: #1c1f2b;
+  margin: 0;
+  color: #e6e9ef;
+}
 
 .admin-container {
   display: flex;
   height: 100vh;
-  background: #eef0f4;
   overflow: hidden;
-  font-family: "Inter", sans-serif;
+  background: #1c1f2b;
 }
 
 /* -----------------------------------------------------------
@@ -15,41 +25,60 @@
 ----------------------------------------------------------- */
 
 .admin-users {
-  width: 330px;
-  background: #ffffff;
+  width: 320px;
+  background: #11131c;
   padding: 20px;
-  border-right: 1px solid #ddd;
+  border-right: 1px solid #202431;
   overflow-y: auto;
 }
 
 .admin-title {
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 700;
+  padding-bottom: 10px;
   margin-bottom: 20px;
+  border-bottom: 1px solid #202431;
+  color: #e8ebf3;
 }
 
+/* User Row */
 .user-item {
-  padding: 12px 14px;
-  border-radius: 10px;
+  background: #181b26;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  border-radius: 14px;
   cursor: pointer;
-  background: #f7f7f7;
-  margin-bottom: 10px;
-  transition: 0.15s;
+  transition: 0.2s;
+  border: 1px solid transparent;
 }
 
 .user-item:hover {
-  background: #ececec;
+  background: #1f2331;
 }
 
 .user-item.active {
-  background: #dce7ff;
-  border-left: 4px solid #4c7cff;
+  background: #263056;
+  border: 1px solid #4c7cff;
 }
 
 .last-msg {
-  font-size: 14px;
-  color: #666;
-  margin-top: 4px;
+  font-size: 13px;
+  color: #9aa0b3;
+  margin-top: 5px;
+}
+
+/* Avatar circle from your current layout */
+.user-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #4c7cff;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  margin-right: 12px;
 }
 
 /* -----------------------------------------------------------
@@ -60,7 +89,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  background: #eef0f4;
+  background: #1c1f2b;
 }
 
 /* -----------------------------------------------------------
@@ -68,20 +97,20 @@
 ----------------------------------------------------------- */
 
 .adminchat-header {
-  padding: 15px 20px;
-  background: #ffffff;
-  border-bottom: 1px solid #ddd;
+  padding: 18px 25px;
+  background: #11131c;
+  border-bottom: 1px solid #202431;
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 16px;
 }
 
 .adminchat-header-avatar {
-  width: 45px;
-  height: 45px;
+  width: 46px;
+  height: 46px;
   border-radius: 50%;
   background: #4c7cff;
-  color: white;
+  color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -100,73 +129,69 @@
 }
 
 .adminchat-header-status {
-  font-size: 14px;
-  color: green;
+  font-size: 13px;
+  color: #6ddf83;
 }
 
 /* -----------------------------------------------------------
-   CHAT BODY (Messages list)
+   CHAT BODY
 ----------------------------------------------------------- */
 
 .adminchat-body {
   flex: 1;
-  padding: 25px;
+  padding: 30px 35px;
   overflow-y: auto;
+  background: #1c1f2b;
 }
 
 /* -----------------------------------------------------------
-   MESSAGE BUBBLES
+   MESSAGE BUBBLES (Modern Rounded)
 ----------------------------------------------------------- */
 
 .chat-bubble {
   max-width: 70%;
-  padding: 12px 16px;
-  border-radius: 16px;
-  margin-bottom: 18px;
+  padding: 14px 18px;
+  border-radius: 18px;
+  margin-bottom: 22px;
   position: relative;
-  display: inline-block;
-}
-
-/* Left = user */
-.bubble-left {
-  background: white;
-  align-self: flex-start;
-  border-top-left-radius: 0;
-}
-
-/* Right = admin*/
-.bubble-right {
-  background: #d0f5c4;
-  align-self: flex-end;
-  border-top-right-radius: 0;
-  margin-left: auto;
-}
-
-/* Text inside bubble */
-.bubble-text {
   font-size: 15px;
-  color: #333;
+  line-height: 1.5;
+}
+
+/* Incoming (user) */
+.bubble-left {
+  background: #262b3a;
+  color: #e6e9ef;
+  border-top-left-radius: 4px;
+}
+
+/* Outgoing (admin) */
+.bubble-right {
+  background: #4c7cff;
+  color: white;
+  margin-left: auto;
+  border-top-right-radius: 4px;
 }
 
 /* Timestamp */
 .bubble-time {
   font-size: 11px;
-  margin-top: 4px;
+  margin-top: 6px;
+  color: #c3c8d4;
   text-align: right;
-  color: #888;
 }
 
 /* -----------------------------------------------------------
-   IMAGES INSIDE CHAT
+   CHAT IMAGES (Modern Glowing Border)
 ----------------------------------------------------------- */
 
 .chat-image {
-  width: 260px;
+  width: 270px;
   max-width: 100%;
-  border-radius: 18px;
+  border-radius: 16px;
   display: block;
   margin-bottom: 6px;
-  border: 4px solid #c6efb6; /* Light green like screenshot */
+  border: 3px solid rgba(76, 124, 255, 0.5);
 }
 
 /* -----------------------------------------------------------
@@ -174,46 +199,58 @@
 ----------------------------------------------------------- */
 
 .adminchat-inputbar {
-  padding: 14px 20px;
-  background: #ffffff;
+  background: #11131c;
+  padding: 16px 22px;
   display: flex;
   align-items: center;
-  gap: 12px;
-  border-top: 1px solid #ddd;
+  gap: 14px;
+  border-top: 1px solid #202431;
 }
 
 .message-input {
   flex: 1;
-  padding: 12px 14px;
-  border-radius: 12px;
-  border: 1px solid #ccc;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid #303549;
+  background: #1c1f2b;
+  color: white;
   font-size: 15px;
 }
 
-.message-input:focus {
-  border-color: #4c7cff;
-  outline: none;
+.message-input::placeholder {
+  color: #8b91a3;
 }
 
+.message-input:focus {
+  outline: none;
+  border-color: #4c7cff;
+}
+
+/* Attachment icon */
 .file-btn {
   font-size: 24px;
   cursor: pointer;
-  padding: 6px;
+  color: #aab0c3;
 }
 
+.file-btn:hover {
+  color: #dce2f5;
+}
+
+/* Send button */
 .send-btn {
   background: #4c7cff;
   color: white;
-  padding: 10px 16px;
+  padding: 10px 18px;
   border: none;
   border-radius: 12px;
-  font-size: 18px;
+  font-size: 16px;
   cursor: pointer;
   transition: 0.2s;
 }
 
 .send-btn:hover {
-  background: #3a64d4;
+  background: #3a63d6;
 }
 
 /* -----------------------------------------------------------
@@ -226,5 +263,5 @@
   align-items: center;
   justify-content: center;
   font-size: 20px;
-  color: #777;
+  color: #8f96aa;
 }
