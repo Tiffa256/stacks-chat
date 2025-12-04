@@ -5,7 +5,7 @@ import React, { useEffect, useState } from "react";
 import { ref, onValue } from "firebase/database";
 import { db } from "../firebase";
 import { useNavigate } from "react-router-dom";
-import "./admin.css";
+import "./Admin.css";
 
 export default function AdminUsers() {
   const [users, setUsers] = useState([]);
