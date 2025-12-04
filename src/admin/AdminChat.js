@@ -109,7 +109,14 @@ export default function AdminChat({ userId: propUserId }) {
             className={msg.sender === "admin" ? "chat-bubble bubble-right" : "chat-bubble bubble-left"}
           >
             {msg.type === "image" ? (
-              <img src={msg.imageUrl || msg.url} alt="upload" className="chat-image" onClick={() => (msg.imageUrl || msg.url) && window.open(msg.imageUrl || msg.url, "_blank")} />
+              <img
+                src={msg.imageUrl || msg.url}
+                alt="upload"
+                className="chat-image"
+                onClick={() =>
+                  (msg.imageUrl || msg.url) && window.open(msg.imageUrl || msg.url, "_blank")
+                }
+              />
             ) : (
               <div className="bubble-text">{msg.text}</div>
             )}
