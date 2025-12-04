@@ -2,7 +2,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { ref, onValue, push, off } from "firebase/database";
 import { db } from "../firebase";
-import "./AdminChat.css";
+import "./Admin.css";
 import { useParams } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 
