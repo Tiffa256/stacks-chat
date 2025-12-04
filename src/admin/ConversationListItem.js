@@ -35,27 +35,31 @@ export default function ConversationListItem({ user, active }) {
 
   return (
     <div
-      className={`sidebar-item ${active ? "active" : ""}`}
+      className={`user-item ${active ? "active" : ""}`}
       onClick={handleClick}
       role="button"
       tabIndex={0}
       onKeyDown={(e) => e.key === "Enter" && handleClick()}
     >
-      <div className="sidebar-item-left">
+      {/* LEFT SIDE: Avatar + User info */}
+      <div className="user-avatar">
         <Avatar seed={user.userId} />
-        <div className="sidebar-item-meta">
-          <div className="sidebar-item-id">{user.userId}</div>
-          <div className="sidebar-item-msg">
-            {user.lastMessage || "No message yet"}
-          </div>
+      </div>
+
+      <div className="user-meta">
+        <div className="user-id">{user.userId}</div>
+        <div className="user-last">
+          {user.lastMessage || "No message yet"}
         </div>
       </div>
 
-      <div className="sidebar-item-right">
-        <div className="sidebar-time">{timeLabel}</div>
-        {isUnread ? (
-          <div className="sidebar-badge">{user.unreadCount}</div>
-        ) : null}
+      {/* RIGHT SIDE: Time + Unread bubble */}
+      <div className="user-time">
+        {timeLabel}
+
+        {isUnread && (
+          <span className="user-unread">{user.unreadCount}</span>
+        )}
       </div>
     </div>
   );
