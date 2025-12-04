@@ -39,9 +39,9 @@ function AdminAppInner() {
 
   // single layout: sidebar, main chat, details
   return (
-    <div className="admin-panel-root">
+    <div className="admin-container" style={{ display: "flex", alignItems: "stretch", height: "100vh" }}>
       <ConversationsPanel />
-      <div className="admin-main">
+      <div style={{ flex: 1, minWidth: 0 }}>
         <ChatPanel />
       </div>
       <div style={{ width: 320 }}>
