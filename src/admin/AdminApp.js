@@ -3,7 +3,7 @@ import { AdminProvider, useAdmin } from "./AdminContext";
 import ConversationsPanel from "./ConversationsPanel";
 import ChatPanel from "./ChatPanel";
 import ConversationDetails from "./ConversationDetails";
-import "./AdminPanel.css";
+import "./Admin.css";
 
 /*
  AdminApp wraps the admin UI and reads the URL to set activeConversation:
