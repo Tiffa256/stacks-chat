@@ -1,5 +1,5 @@
 import React from "react";
-import "./Avatar.css"; // optional if you want external styles
+import "./Admin.css"; // optional if you want external styles
 
 /**
  * Avatar Component
