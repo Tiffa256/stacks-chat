@@ -5,6 +5,14 @@ import "./Welcome.css";
 export default function Welcome() {
   const navigate = useNavigate();
 
+  const handleStartChat = () => {
+    navigate("/chat", {
+      state: {
+        username: "Guest", // 🔥 Sends username to Chat.js
+      },
+    });
+  };
+
   return (
     <div
       className="welcome-container"
@@ -27,12 +35,12 @@ export default function Welcome() {
       >
         <div className="profile">
           <img
-            src="/ChatGPT Image Dec 6, 2025, 06_09_52 AM.png"  // 🔥 YOUR LOGO
+            src="/ChatGPT Image Dec 6, 2025, 06_09_52 AM.png"
             alt="Stacks Logo"
             className="avatar"
           />
           <div className="profile-text">
-            <h4>Stacks-CS</h4>              {/* 🔥 UPDATED NAME */}
+            <h4>Stacks-CS</h4>
             <span>Customer Service</span>
           </div>
         </div>
@@ -50,7 +58,7 @@ export default function Welcome() {
       </div>
 
       {/* Chat Button */}
-      <div className="chat-box" onClick={() => navigate("/chat")}>
+      <div className="chat-box" onClick={handleStartChat}>
         <span className="chat-text">Chat with us</span>
         <span className="chat-arrow">➜</span>
       </div>
