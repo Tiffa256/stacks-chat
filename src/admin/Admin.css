@@ -40,7 +40,6 @@ Full rewrite: grid root, robust overflow handling, responsive images
   }
 
 /* ---------- Layout root (grid) ---------- */
-/* Grid protects the layout from children forcing overflow */
 .admin-container {
 display: grid;
 grid-template-columns: var(--sidebar-width) 1fr;
@@ -48,26 +47,26 @@ min-height: 100vh;
 width: 100%;
 gap: 0;
 background: linear-gradient(180deg, rgba(12,14,20,0.9), rgba(10,11,15,0.98));
-overflow: hidden; /* keep viewport stable; children handle internal scroll */
+overflow: hidden;
 }
 
 /* main column (right) */
 .admin-main {
 display: flex;
 flex-direction: column;
-min-width: 0; /* important so it can shrink */
+min-width: 0;
 background: transparent;
 }
 
 /* center/inner chat stage */
 .chat-stage {
 width: 100%;
-max-width: 1100px; /* max width to keep layout readable on very wide screens */
+max-width: 1100px;
 margin: 0 auto;
 display: flex;
 flex-direction: column;
 height: 100vh;
-min-width: 0; /* allow children to shrink to prevent overflow */
+min-width: 0;
 padding: var(--gutter);
 }
 
@@ -99,7 +98,6 @@ border: 2px solid rgba(0,0,0,0);
 background: transparent;
 }
 
-/* sidebar content */
 .sidebar-header{
 padding-bottom:10px;
 margin-bottom:8px;
@@ -214,7 +212,7 @@ flex-shrink:0;
 flex:1 1 auto;
 min-height:0;
 padding:18px 0;
-overflow-y:auto;     /* scroll for messages */
+overflow-y:auto;
 display:flex;
 flex-direction:column;
 gap:8px;
@@ -222,7 +220,6 @@ scroll-behavior: smooth;
 overscroll-behavior: contain;
 }
 
-/* center the messages and constrain width so bubbles don't stretch too wide */
 .messages-inner {
 width: 100%;
 max-width: 720px;
@@ -233,10 +230,9 @@ gap:12px;
 padding: 8px 20px 24px 20px;
 min-height: 0;
 box-sizing: border-box;
-min-width: 0; /* allow shrinking */
+min-width: 0;
 }
 
-/* each bubble wrapper must be able to shrink, avoid forcing overflow */
 .bubble-wrapper {
 display:flex;
 align-items:flex-end;
@@ -246,6 +242,16 @@ width:100%;
 justify-content: flex-start;
 min-width: 0;
 overflow: visible;
+}
+
+/* FIX ADDED: ensure right-side wrappers align correctly */
+.row-admin .bubble-wrapper {
+justify-content: flex-end;
+}
+
+/* FIX ADDED: ensure avatar + bubble align left correctly */
+.row-user .bubble-wrapper {
+justify-content: flex-start;
 }
 
 /* date separator */
@@ -273,7 +279,7 @@ display:inline-block;
 padding:12px 16px;
 border-radius: var(--radius-lg);
 max-width:100%;
-word-break: break-word; /* allow wrapping inside long tokens */
+word-break: break-word;
 box-shadow: 0 8px 26px rgba(2,6,23,0.55);
 font-size:15px;
 line-height:1.4;
@@ -281,26 +287,11 @@ min-width: 0;
 box-sizing: border-box;
 }
 
-.bubble-left,
-.bubble-user,
-.wa-bubble.user {
-background: linear-gradient(180deg, #0f1317, #15161b);
-color:var(--text);
-border-top-left-radius:6px;
-border-top-right-radius: var(--radius-lg);
-box-shadow: 0 6px 18px rgba(0,0,0,0.5);
-}
+/* FIX ADDED: compatibility with ChatMessage.js bubble classes */
+.bubble-left { background: linear-gradient(180deg, #0f1317, #15161b); color: var(--text); }
+.bubble-right { background: linear-gradient(180deg, var(--outgoing), var(--accent-600)); color: white; }
 
-.bubble-right,
-.bubble-admin,
-.wa-bubble.admin {
-background: linear-gradient(180deg, var(--outgoing), var(--accent-600));
-color:white;
-border-top-right-radius:6px;
-border-top-left-radius: var(--radius-lg);
-box-shadow: 0 14px 36px rgba(83,72,230,0.14);
-}
-
+/* text */
 .bubble-text, .wa-text {
 color:inherit;
 font-size:15px;
@@ -322,8 +313,8 @@ overflow: hidden;
 .reply-name, .wa-reply-name { font-weight:700; font-size:13px; color:var(--text); margin-bottom:4px; }
 .reply-snippet, .wa-reply-snippet { font-size:13px; color:var(--muted); }
 
-/* ---------- BUBBLE IMAGES (responsive!) ---------- */
-.bubble-img, .chat-image, .wa-img, .chat-image img {
+/* ---------- IMAGES ---------- */
+.bubble-img {
 max-width: 100%;
 height: auto;
 border-radius: 12px;
@@ -331,13 +322,8 @@ display: block;
 margin-bottom: 8px;
 box-sizing: border-box;
 border: 3px solid rgba(107,99,255,0.12);
-object-fit: cover; /* helps when image aspect differs */
-}
-
-/* If you want to constrain large media cards, use a sensible max size */
-.media-card {
-max-width: 720px;
-width: 100%;
+object-fit: cover;
+cursor: pointer;
 }
 
 /* file bubble */
@@ -351,11 +337,12 @@ align-items:center;
 width: 100%;
 max-width: 520px;
 box-sizing: border-box;
+cursor: pointer;
 }
 .file-icon{ font-size:20px; flex-shrink: 0; }
 .file-name{ font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
-/* footer / timestamp area */
+/* footer */
 .bubble-footer, .wa-footer {
 display:flex;
 gap:8px;
@@ -364,6 +351,19 @@ align-items:center;
 margin-top:8px;
 font-size:12px;
 color:var(--muted);
+}
+
+/* ---------- FIX ADDED: bubble menu alignment ---------- */
+.bubble-menu {
+display: flex;
+align-items: center;
+height: 100%;
+flex-shrink: 0;
+}
+
+/* Prevent menu from collapsing */
+.bubble-menu > * {
+display: flex;
 }
 
 /* ---------- Input bar ---------- */
@@ -411,7 +411,6 @@ flex: 0 0 auto;
 }
 
 @media (max-width: 900px) {
-/* Collapse to single column — sidebar becomes full width above the chat */
 .admin-container {
 grid-template-columns: 1fr;
 grid-auto-rows: auto 1fr;
@@ -420,20 +419,19 @@ grid-auto-rows: auto 1fr;
 width: 100%;
 border-right: none;
 border-bottom: 1px solid rgba(255,255,255,0.03);
-position: relative; /* can be made sticky if desired */
+position: relative;
 }
 .chat-stage {
 max-width: 100%;
 padding: 12px;
-height: calc(100vh - 80px); /* accommodates header & users block if stacked */
+height: calc(100vh - 80px);
 }
 
-/* message image smaller on very small screens */
-.bubble-img, .chat-image, .wa-img { border-radius: 10px; }
+.bubble-img { border-radius: 10px; }
 
-/* adjust avatar sizes */
-.user-avatar { width:40px; height:40px; flex: 0 0 40px; }
+.user-avatar { width:40px; height:40px; }
 .adminchat-header-avatar { width:44px; height:44px; }
+
 .messages-inner { padding: 8px 12px 20px 12px; }
 }
 
