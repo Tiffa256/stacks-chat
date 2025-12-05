@@ -9,18 +9,17 @@ export default function Welcome() {
     <div
       className="welcome-container"
       style={{
-        paddingTop: 0,     // 🔥 REMOVE TOP PADDING THAT PUSHES BAR DOWN
-        marginTop: 0,      // 🔥 ENSURE NO MARGIN ABOVE
+        paddingTop: 0,
+        marginTop: 0,
       }}
     >
-
       {/* Top Bar */}
       <div
         className="top-bar"
         style={{
-          marginTop: 0,     // 🔥 FORCE TO TOP
-          paddingTop: 10,   // (same look)
-          position: "relative", 
+          marginTop: 0,
+          paddingTop: 10,
+          position: "relative",
           top: 0,
           left: 0,
           width: "100%",
@@ -28,12 +27,12 @@ export default function Welcome() {
       >
         <div className="profile">
           <img
-            src="https://i.pravatar.cc/60?img=32"
-            alt="profile"
+            src="/ChatGPT Image Dec 6, 2025, 06_09_52 AM.png"  // 🔥 YOUR LOGO
+            alt="Stacks Logo"
             className="avatar"
           />
           <div className="profile-text">
-            <h4>sequencecommerce</h4>
+            <h4>Stacks-CS</h4>              {/* 🔥 UPDATED NAME */}
             <span>Customer Service</span>
           </div>
         </div>
