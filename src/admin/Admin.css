@@ -1,6 +1,7 @@
 /* ==========================================================
 Admin.css — Dark Modern Theme (refined, responsive)
 Full rewrite: grid root, robust overflow handling, responsive images
+Ensures: received (user) messages LEFT, sent (admin) messages RIGHT
 ========================================================== */
 
 :root{
@@ -31,12 +32,12 @@ Full rewrite: grid root, robust overflow handling, responsive images
 * { box-sizing: border-box; -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; }
   html, body, #root { height: 100%; margin: 0; padding: 0; }
   body{
+  margin:0;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
   background: linear-gradient(90deg, rgba(107,99,255,0.06), var(--bg-0));
-  color: var(--text);
-  line-height: 1.35;
-  -webkit-text-size-adjust: 100%;
-  -ms-text-size-adjust: 100%;
+  color:var(--text);
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
   }
 
 /* ---------- Layout root (grid) ---------- */
@@ -51,23 +52,22 @@ background: linear-gradient(180deg, rgba(12,14,20,0.9), rgba(10,11,15,0.98));
 overflow: hidden; /* keep viewport stable; children handle internal scroll */
 }
 
-/* main column (right) */
 .admin-main {
 display: flex;
 flex-direction: column;
-min-width: 0; /* important so it can shrink */
+min-width: 0;
 background: transparent;
 }
 
 /* center/inner chat stage */
 .chat-stage {
 width: 100%;
-max-width: 1100px; /* max width to keep layout readable on very wide screens */
+max-width: 1100px;
 margin: 0 auto;
 display: flex;
 flex-direction: column;
 height: 100vh;
-min-width: 0; /* allow children to shrink to prevent overflow */
+min-width: 0;
 padding: var(--gutter);
 }
 
@@ -75,27 +75,27 @@ padding: var(--gutter);
 .admin-users{
 width: var(--sidebar-width);
 min-width: 220px;
-background: linear-gradient(180deg, #0e1014, #0b0c10);
+background:linear-gradient(180deg, #0e1014, #0b0c10);
 border-right:1px solid rgba(255,255,255,0.03);
-padding: 18px;
-overflow-y: auto;
-overflow-x: hidden;
+padding:18px;
+overflow-y:auto;
+overflow-x:hidden;
 }
 
-/* custom scrollbar styling (optional) */
+/* scrollbars */
 .admin-users::-webkit-scrollbar,
-.adminchat-body::-webkit-scrollbar {
-width: 10px;
-height: 10px;
+.adminchat-body::-webkit-scrollbar{
+width:10px;
+height:10px;
 }
 .admin-users::-webkit-scrollbar-thumb,
-.adminchat-body::-webkit-scrollbar-thumb {
+.adminchat-body::-webkit-scrollbar-thumb{
 background: rgba(255,255,255,0.04);
-border-radius: 999px;
+border-radius:999px;
 border: 2px solid rgba(0,0,0,0);
 }
 .admin-users::-webkit-scrollbar-track,
-.adminchat-body::-webkit-scrollbar-track {
+.adminchat-body::-webkit-scrollbar-track{
 background: transparent;
 }
 
@@ -113,6 +113,7 @@ color:var(--text);
 font-weight:700;
 }
 
+/* ---------- users list items ---------- */
 .user-list-item,
 .user-item{
 display:flex;
@@ -122,16 +123,13 @@ gap:12px;
 padding:12px;
 border-radius:12px;
 background:transparent;
-transition: transform 0.12s ease, background 0.12s ease;
+transition: all 0.12s ease;
 cursor:pointer;
-min-width: 0;
+min-width:0;
 }
 
 .user-list-item:hover,
-.user-item:hover{
-background:rgba(255,255,255,0.02);
-transform: translateY(-3px);
-}
+.user-item:hover{ background:rgba(255,255,255,0.02); transform:translateY(-1px) }
 
 .user-list-item.active,
 .user-item.active{
@@ -140,7 +138,7 @@ border-left:4px solid var(--accent);
 padding-left:10px;
 }
 
-.user-left{ display:flex; align-items:center; gap:12px; min-width:0; flex:1; }
+.user-left{ display:flex; align-items:center; gap:12px; min-width:0; flex:1 }
 .user-avatar{
 width:44px; height:44px; border-radius:50%;
 background:var(--accent);
@@ -163,12 +161,12 @@ border: 2px solid var(--panel);
 box-shadow: 0 0 0 4px rgba(107,99,255,0.04);
 }
 
-.user-meta{ min-width:0; overflow:hidden; }
-.user-id{ font-weight:700; font-size:14px; color:var(--text); white-space:nowrap; text-overflow:ellipsis; overflow:hidden; }
+.user-meta{ min-width:0; overflow:hidden }
+.user-id{ font-weight:700; font-size:14px; color:var(--text); white-space:nowrap; text-overflow:ellipsis; overflow:hidden }
 .last-msg{ font-size:13px; color:var(--muted); margin-top:6px; white-space:nowrap; text-overflow:ellipsis; overflow:hidden; }
 
-.user-right{ display:flex; align-items:flex-start; flex-direction:column; gap:6px; justify-content:center; flex:0 0 auto; }
-.time{ font-size:12px; color:var(--muted); }
+.user-right{ display:flex; align-items:flex-start; flex-direction:column; gap:6px; justify-content:center; flex:0 0 auto }
+.time{ font-size:12px; color:var(--muted) }
 .badge{
 background:var(--accent);
 color:white;
@@ -233,47 +231,86 @@ gap:12px;
 padding: 8px 20px 24px 20px;
 min-height: 0;
 box-sizing: border-box;
-min-width: 0; /* allow shrinking */
-}
-
-/* each bubble wrapper must be able to shrink, avoid forcing overflow */
-.bubble-wrapper {
-display:flex;
-align-items:flex-end;
-gap:8px;
-max-width:100%;
-width:100%;
-justify-content: flex-start;
 min-width: 0;
-overflow: visible;
 }
 
-/* date separator */
-.date-sep{
-align-self:center;
-background: rgba(255,255,255,0.03);
-color:var(--muted);
-padding:6px 12px;
-border-radius:999px;
-font-size:13px;
-margin:18px 0;
+/* ---------- MESSAGE ROWS & BUBBLE LAYOUT ---------- */
+/* Each message row stacks (bubble + footer). Row-level alignment handles left/right. */
+.msg-row,
+.row-admin,
+.row-user {
+display: flex;
+flex-direction: column;   /* bubble above metadata */
+gap: 6px;
+width: 100%;
+min-width: 0;
+margin-bottom: 6px;
 }
 
-/* ---------- Message rows ---------- */
-.row-admin, .admin-row, .msg-row.admin {
-display:flex; justify-content:flex-end; margin-bottom:12px; width:100%; min-width:0;
-}
-.row-user, .user-row, .msg-row.user {
-display:flex; justify-content:flex-start; margin-bottom:12px; width:100%; min-width:0;
+/* Align row: incoming left, outgoing right */
+.row-user { align-items: flex-start; }
+.row-admin { align-items: flex-end; }
+
+/* bubble-wrapper contains avatar (optional), bubble, menu.
+For user rows: layout is [avatar] [bubble] [menu]
+For admin rows: layout is reversed so bubble sits on right.
+*/
+.bubble-wrapper {
+display: flex;
+align-items: flex-end;
+gap: 10px;
+width: 100%;
+min-width: 0;
 }
 
-/* ---------- Bubbles ---------- */
-.chat-bubble, .bubble-user, .bubble-admin, .bubble-left, .bubble-right, .wa-bubble {
+/* left-aligned (received) */
+.row-user .bubble-wrapper {
+justify-content: flex-start;
+flex-direction: row;
+}
+
+/* right-aligned (sent) */
+.row-admin .bubble-wrapper {
+justify-content: flex-end;
+flex-direction: row-reverse; /* keeps DOM order but visually reversed */
+}
+
+/* Avatar for user messages */
+.bubble-wrapper .user-avatar {
+width:38px;
+height:38px;
+border-radius:50%;
+background:var(--accent);
+display:flex;
+align-items:center;
+justify-content:center;
+color:white;
+font-weight:700;
+font-size:14px;
+flex: 0 0 38px;
+box-shadow: 0 6px 20px rgba(107,99,255,0.08);
+}
+
+/* Menu / actions next to bubble (small) */
+.bubble-menu {
+display:flex;
+align-items:center;
+justify-content:center;
+flex: 0 0 auto;
+}
+
+/* ---------- BUBBLES ---------- */
+.chat-bubble,
+.bubble-left,
+.bubble-right,
+.bubble-user,
+.bubble-admin,
+.wa-bubble {
 display:inline-block;
-padding:12px 16px;
+padding:10px 14px;
 border-radius: var(--radius-lg);
-max-width:100%;
-word-break: break-word; /* allow wrapping inside long tokens */
+max-width: 78%;
+word-break:break-word;
 box-shadow: 0 8px 26px rgba(2,6,23,0.55);
 font-size:15px;
 line-height:1.4;
@@ -281,6 +318,7 @@ min-width: 0;
 box-sizing: border-box;
 }
 
+/* Received (left) */
 .bubble-left,
 .bubble-user,
 .wa-bubble.user {
@@ -291,6 +329,7 @@ border-top-right-radius: var(--radius-lg);
 box-shadow: 0 6px 18px rgba(0,0,0,0.5);
 }
 
+/* Sent (right) */
 .bubble-right,
 .bubble-admin,
 .wa-bubble.admin {
@@ -301,6 +340,7 @@ border-top-left-radius: var(--radius-lg);
 box-shadow: 0 14px 36px rgba(83,72,230,0.14);
 }
 
+/* bubble text */
 .bubble-text, .wa-text {
 color:inherit;
 font-size:15px;
@@ -322,7 +362,7 @@ overflow: hidden;
 .reply-name, .wa-reply-name { font-weight:700; font-size:13px; color:var(--text); margin-bottom:4px; }
 .reply-snippet, .wa-reply-snippet { font-size:13px; color:var(--muted); }
 
-/* ---------- BUBBLE IMAGES (responsive!) ---------- */
+/* ---------- IMAGES & FILES (responsive) ---------- */
 .bubble-img, .chat-image, .wa-img, .chat-image img {
 max-width: 100%;
 height: auto;
@@ -331,14 +371,11 @@ display: block;
 margin-bottom: 8px;
 box-sizing: border-box;
 border: 3px solid rgba(107,99,255,0.12);
-object-fit: cover; /* helps when image aspect differs */
+object-fit: cover;
 }
 
-/* If you want to constrain large media cards, use a sensible max size */
-.media-card {
-max-width: 720px;
-width: 100%;
-}
+/* media card cap */
+.media-card { max-width: 720px; width: 100%; }
 
 /* file bubble */
 .bubble-file, .wa-file {
@@ -355,7 +392,7 @@ box-sizing: border-box;
 .file-icon{ font-size:20px; flex-shrink: 0; }
 .file-name{ font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
-/* footer / timestamp area */
+/* bubble footer (time + ticks) stays inside bubble, aligned to the right */
 .bubble-footer, .wa-footer {
 display:flex;
 gap:8px;
@@ -364,7 +401,11 @@ align-items:center;
 margin-top:8px;
 font-size:12px;
 color:var(--muted);
+width: 100%;
 }
+
+/* If you want timestamps to be smaller and subdued inside the footer */
+.bubble-time, .bubble-ticks { color: var(--muted); font-size:12px; }
 
 /* ---------- Input bar ---------- */
 .adminchat-inputbar{
@@ -387,7 +428,7 @@ color:var(--text);
 font-size:15px;
 min-width: 0;
 }
-.message-input::placeholder{ color:rgba(255,255,255,0.35); }
+.message-input::placeholder{ color:rgba(255,255,255,0.35) }
 
 .file-btn{ color:var(--muted); font-size:20px; cursor:pointer; flex: 0 0 auto; }
 
@@ -420,19 +461,18 @@ grid-auto-rows: auto 1fr;
 width: 100%;
 border-right: none;
 border-bottom: 1px solid rgba(255,255,255,0.03);
-position: relative; /* can be made sticky if desired */
+position: relative;
 }
 .chat-stage {
 max-width: 100%;
 padding: 12px;
-height: calc(100vh - 80px); /* accommodates header & users block if stacked */
+height: calc(100vh - 80px);
 }
 
 /* message image smaller on very small screens */
 .bubble-img, .chat-image, .wa-img { border-radius: 10px; }
 
-/* adjust avatar sizes */
-.user-avatar { width:40px; height:40px; flex: 0 0 40px; }
+.user-avatar { width:36px; height:36px; flex: 0 0 36px; }
 .adminchat-header-avatar { width:44px; height:44px; }
 .messages-inner { padding: 8px 12px 20px 12px; }
 }
@@ -454,35 +494,4 @@ height: calc(100vh - 80px); /* accommodates header & users block if stacked */
 /* Accessibility focus outlines */
 :focus { outline: 3px solid rgba(107,99,255,0.16); outline-offset: 2px; border-radius: 6px; }
 
-/* Ensure each message row stacks items vertically */
-.msg-row,
-.row-admin,
-.row-user {
-  display: flex;
-  flex-direction: column;   /* <<< KEY FIX */
-  align-items: flex-start;  /* user bubble alignment */
-  gap: 4px;
-  width: 100%;
-}
-
-/* Admin messages align right */
-.row-admin {
-  align-items: flex-end;    /* admin bubble alignment */
-}
-
-/* Bubble takes only the width of content */
-.chat-bubble,
-.bubble-left,
-.bubble-right {
-  max-width: 75%;
-}
-
-/* Timestamp always appears below the bubble */
-.msg-meta {
-  font-size: 12px;
-  color: var(--muted);
-  margin-top: 3px;
-  display: flex;
-  gap: 6px;
-}
-
+/* End of file */
