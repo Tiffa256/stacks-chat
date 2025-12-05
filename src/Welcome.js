@@ -1,15 +1,26 @@
-import React from "react";
+// src/Welcome.js
+import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Welcome.css";
 
 export default function Welcome() {
   const navigate = useNavigate();
 
-  const handleStartChat = () => {
+  // 🔥 Create or reuse a persistent user ID
+  useEffect(() => {
+    let user = localStorage.getItem("chat-username");
+
+    if (!user) {
+      user = "user-" + Math.floor(Math.random() * 10000000);
+      localStorage.setItem("chat-username", user);
+    }
+  }, []);
+
+  const startChat = () => {
+    const user = localStorage.getItem("chat-username");
+
     navigate("/chat", {
-      state: {
-        username: "Guest", // 🔥 Sends username to Chat.js
-      },
+      state: { username: user },
     });
   };
 
@@ -58,7 +69,7 @@ export default function Welcome() {
       </div>
 
       {/* Chat Button */}
-      <div className="chat-box" onClick={handleStartChat}>
+      <div className="chat-box" onClick={startChat}>
         <span className="chat-text">Chat with us</span>
         <span className="chat-arrow">➜</span>
       </div>
