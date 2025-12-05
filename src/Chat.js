@@ -117,8 +117,17 @@ function Chat() {
   return (
     <div className="chat-container">
       <div className="chat-header">
-        <button className="back-btn">←</button>
+        
+        {/* 🔥 BACK BUTTON NOW CLICKABLE */}
+        <button
+          className="back-btn"
+          onClick={() => (window.location.href = "/")}
+        >
+          ←
+        </button>
+
         <h3>Customer Support</h3>
+
         <div className="header-right">
           <span>English ▾</span>
           <span className="volume-icon">🔊</span>
