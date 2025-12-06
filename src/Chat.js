@@ -130,8 +130,11 @@ function Chat() {
     <div className="chat-container">
       <div className="chat-header">
 
-        {/* ✅ FIX: Back button — NO username needed */}
-        <button className="back-btn" onClick={() => navigate("/")}>
+        {/* ✅ FIX: Back now RETURNS username */}
+        <button
+          className="back-btn"
+          onClick={() => navigate("/", { state: { username: userId } })}
+        >
           ←
         </button>
 
@@ -177,9 +180,7 @@ function Chat() {
         </button>
       </form>
 
-      {uploading && (
-        <UploadingIndicator uploading={uploading} />
-      )}
+      {uploading && <UploadingIndicator uploading={uploading} />}
     </div>
   );
 }
