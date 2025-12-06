@@ -1,13 +1,30 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import "./Welcome.css";
 
 export default function Welcome() {
   const navigate = useNavigate();
+  const location = useLocation();
 
-  // ✅ Get username from URL (required)
+  // ✅ Get username from:
+  // 1. State (when coming BACK from chat)
+  // 2. URL
+  // 3. LocalStorage
   const params = new URLSearchParams(window.location.search);
-  const user = params.get("user");
+  const urlUser = params.get("user");
+
+  const storedUser = localStorage.getItem("chat-username");
+
+  const user =
+    location.state?.username ||
+    urlUser ||
+    storedUser ||
+    null;
+
+  // 🔥 Always save username if found
+  if (user) {
+    localStorage.setItem("chat-username", user);
+  }
 
   return (
     <div
@@ -31,12 +48,12 @@ export default function Welcome() {
       >
         <div className="profile">
           <img
-            src="/ChatGPT Image Dec 6, 2025, 06_09_52 AM.png"  // 🔥 YOUR LOGO
+            src="/ChatGPT Image Dec 6, 2025, 06_09_52 AM.png"
             alt="Stacks Logo"
             className="avatar"
           />
           <div className="profile-text">
-            <h4>Stacks-CS</h4>              {/* 🔥 UPDATED NAME */}
+            <h4>Stacks-CS</h4>
             <span>Customer Service</span>
           </div>
         </div>
@@ -56,7 +73,11 @@ export default function Welcome() {
       {/* Chat Button */}
       <div
         className="chat-box"
-        onClick={() => navigate(`/chat?user=${user || ""}`)}  // ✅ Pass username to chat
+        onClick={() =>
+          navigate(`/chat?user=${user || ""}`, {
+            state: { username: user },
+          })
+        }
       >
         <span className="chat-text">Chat with us</span>
         <span className="chat-arrow">➜</span>
