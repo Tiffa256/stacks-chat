@@ -2,7 +2,9 @@ import React, { useEffect, useRef, useState, useCallback } from "react";
 import {
   subscribeToMessages,
   deleteMessage as firebaseDeleteMessage,
+  db,
 } from "../firebase";
+import { ref as dbRef, remove as dbRemove, update as dbUpdate } from "firebase/database";
 import { useAdmin } from "./AdminContext";
 import Composer from "./Composer";
 import "./Admin.css";
@@ -190,6 +192,57 @@ export default function ChatPanel() {
     }
   };
 
+  // Admin action: block user (mark conversation and user meta)
+  const handleBlockUser = useCallback(async () => {
+    if (!activeConversation) return;
+    const ok = window.confirm("Block this user? They will be marked blocked.");
+    if (!ok) return;
+    try {
+      await dbUpdate(dbRef(db, `meta/conversations/${activeConversation}`), {
+        status: "blocked",
+        blockedAt: Date.now(),
+      });
+      await dbUpdate(dbRef(db, `meta/users/${activeConversation}`), {
+        is_blocked: true,
+        blockedAt: Date.now(),
+      });
+      alert("User blocked.");
+    } catch (err) {
+      console.error("Failed to block user", err);
+      alert("Failed to block user: " + (err.message || err));
+    }
+  }, [activeConversation]);
+
+  // Admin action: delete entire conversation (remove messages + update meta)
+  const handleDeleteConversation = useCallback(async () => {
+    if (!activeConversation) return;
+    const ok = window.confirm("Delete this conversation and all messages? This is irreversible.");
+    if (!ok) return;
+    try {
+      await dbRemove(dbRef(db, `messages/${activeConversation}`));
+      await dbUpdate(dbRef(db, `meta/conversations/${activeConversation}`), {
+        lastMessage: null,
+        lastSender: null,
+        lastTimestamp: null,
+        status: "deleted",
+        deletedAt: Date.now(),
+      });
+      // optional: mark user meta as deleted
+      await dbUpdate(dbRef(db, `meta/users/${activeConversation}`), {
+        is_deleted: true,
+        deletedAt: Date.now(),
+      });
+
+      // clear local UI
+      setMessages([]);
+      setReplyTo(null);
+      alert("Conversation deleted.");
+    } catch (err) {
+      console.error("Failed to delete conversation", err);
+      alert("Failed to delete conversation: " + (err.message || err));
+    }
+  }, [activeConversation]);
+
   if (!activeConversation)
     return <div className="empty-state">Select a conversation</div>;
 
@@ -210,6 +263,38 @@ export default function ChatPanel() {
               Chat with <strong>{activeConversation}</strong>
             </div>
             <div className="adminchat-header-status">Admin: {agentId}</div>
+          </div>
+
+          {/* Admin action buttons (delete convo / block user) */}
+          <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
+            <button
+              onClick={handleBlockUser}
+              title="Block user"
+              style={{
+                padding: "8px 10px",
+                borderRadius: 8,
+                cursor: "pointer",
+                background: "transparent",
+                border: "1px solid rgba(0,0,0,0.06)"
+              }}
+            >
+              Block
+            </button>
+            <button
+              onClick={handleDeleteConversation}
+              title="Delete conversation"
+              style={{
+                padding: "8px 10px",
+                borderRadius: 8,
+                cursor: "pointer",
+                background: "#ffdede",
+                border: "1px solid rgba(0,0,0,0.04)",
+                color: "#9a1a1a",
+                fontWeight: 600
+              }}
+            >
+              Delete Conversation
+            </button>
           </div>
         </div>
 
