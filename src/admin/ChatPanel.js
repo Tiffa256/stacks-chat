@@ -4,12 +4,18 @@ import {
   deleteMessage as firebaseDeleteMessage,
   db,
 } from "../firebase";
-import { ref as dbRef, remove as dbRemove, update as dbUpdate } from "firebase/database";
+import {
+  ref as dbRef,
+  remove as dbRemove,
+  update as dbUpdate,
+  get as dbGet,
+} from "firebase/database";
 import { useAdmin } from "./AdminContext";
 import Composer from "./Composer";
 import "./Admin.css";
 import ChatMessage from "./ChatMessage";
 import DateSeparator from "./DateSeparator";
+import { supabase } from "../supabaseClient"; // kept for compatibility with other handlers
 
 function formatDateHeader(ts) {
   if (!ts) return "";
@@ -33,6 +39,7 @@ export default function ChatPanel() {
     agentId,
     sendFileMessage,
     sendTextMessage,
+    setActiveConversation, // used to navigate back after hiding a conversation
   } = useAdmin();
 
   const [messages, setMessages] = useState([]);
@@ -243,6 +250,57 @@ export default function ChatPanel() {
     }
   }, [activeConversation]);
 
+  // NEW: Hide conversation locally from admin panel only (no DB changes)
+  // This stores the hidden conversation id in localStorage under "hiddenConversations"
+  // and clears the activeConversation in the UI.
+  const handleHideConversationLocally = useCallback(() => {
+    if (!activeConversation) return;
+    const ok = window.confirm(
+      "Remove this conversation from the admin panel view? This only hides it locally and does NOT delete data from the database. Continue?"
+    );
+    if (!ok) return;
+
+    try {
+      // Read existing hidden list
+      const raw = localStorage.getItem("hiddenConversations");
+      let hidden = [];
+      if (raw) {
+        try {
+          hidden = JSON.parse(raw) || [];
+        } catch (e) {
+          hidden = [];
+        }
+      }
+
+      if (!hidden.includes(activeConversation)) {
+        hidden.push(activeConversation);
+        localStorage.setItem("hiddenConversations", JSON.stringify(hidden));
+      }
+
+      // Clear UI and navigate back to /admin
+      setMessages([]);
+      setReplyTo(null);
+
+      // Clear active conversation in context (if available)
+      if (typeof setActiveConversation === "function") {
+        setActiveConversation(null);
+      }
+
+      // Update URL to /admin so AdminApp syncs to no active chat
+      try {
+        window.history.pushState({}, "", "/admin");
+        window.dispatchEvent(new PopStateEvent("popstate"));
+      } catch (e) {
+        // ignore; not critical
+      }
+
+      alert("Conversation removed from this panel. To restore, remove it from the browser's localStorage key 'hiddenConversations'.");
+    } catch (err) {
+      console.error("Failed to hide conversation locally:", err);
+      alert("Failed to remove conversation from panel.");
+    }
+  }, [activeConversation, setActiveConversation]);
+
   if (!activeConversation)
     return <div className="empty-state">Select a conversation</div>;
 
@@ -265,7 +323,7 @@ export default function ChatPanel() {
             <div className="adminchat-header-status">Admin: {agentId}</div>
           </div>
 
-          {/* Admin action buttons (delete convo / block user) */}
+          {/* Admin action buttons (block user / delete convo / hide locally) */}
           <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
             <button
               onClick={handleBlockUser}
@@ -294,6 +352,23 @@ export default function ChatPanel() {
               }}
             >
               Delete Conversation
+            </button>
+
+            {/* Hide locally button (no DB changes) */}
+            <button
+              onClick={handleHideConversationLocally}
+              title="Remove from panel (local only)"
+              style={{
+                padding: "8px 10px",
+                borderRadius: 8,
+                cursor: "pointer",
+                background: "#4b5563",
+                border: "1px solid rgba(0,0,0,0.06)",
+                color: "#fff",
+                fontWeight: 700
+              }}
+            >
+              Remove from panel
             </button>
           </div>
         </div>
