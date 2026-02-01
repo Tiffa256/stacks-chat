@@ -53,7 +53,7 @@ export default function Welcome() {
             className="avatar"
           />
           <div className="profile-text">
-            <h4>Stacks-CS</h4>
+            <h4>Stacks</h4>
             <span>Customer Service</span>
           </div>
         </div>
