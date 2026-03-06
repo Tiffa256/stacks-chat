@@ -1,5 +1,18 @@
 // src/admin/AdminPanel.js
 // Ensure we read from the "messages" root (NOT "chats") so admin opens the same path users write to.
+//
+// NOTE (IMPORTANT):
+// This file implements a client-only gate (no server/API calls) so that the admin UI
+// will not subscribe to Firebase or show conversations until a local admin password
+// (or username+password) is entered. This is a convenience / light-weight protection
+// for cases where you explicitly requested "no server or api needed" — but it is NOT
+// a substitute for server-side authentication. Client-only protection can be bypassed
+// by retrieving the JS bundle or inspecting code in the browser. Use only if you
+// understand and accept this limitation.
+//
+// To make this usable immediately, a default password is provided below. Change the
+// DEFAULT_GLOBAL_PASSWORD and ADMIN_USERS entries before deploying to production.
+
 import React, { useEffect, useState } from "react";
 import { ref, onValue } from "firebase/database";
 import AdminChat from "./AdminChat";
@@ -11,109 +24,135 @@ function formatTime(ts) {
   return new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
+/**
+ * Client-only admin protection configuration.
+ *
+ * WARNING:
+ * - These values live in client JS. Anyone with access to the bundle can view them.
+ * - For stronger security, implement server-side authentication and session cookies.
+ *
+ * QUICK USAGE:
+ * - Replace DEFAULT_GLOBAL_PASSWORD with your chosen global admin password.
+ * - Optionally add entries to ADMIN_USERS to require username+password.
+ *
+ * Example:
+ *   const ADMIN_USERS = [{ username: 'alice', password: 'aliceStrongPwd' }];
+ *   const DEFAULT_GLOBAL_PASSWORD = 'myGlobalAdminPwd';
+ */
+const DEFAULT_GLOBAL_PASSWORD = "admin123"; // CHANGE THIS
+const ADMIN_USERS = [
+  // Optional admin users (username + password). CHANGE these before production.
+  { username: "admin", password: "admin123" }, // CHANGE THIS
+];
+
+// Session storage key used to persist the admin auth state in the browser session
+const SESSION_KEY = "client_admin_authenticated_v1";
+
 function AdminPanel() {
-  // Authentication state for admin panel (client-side guard)
-  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  // Authentication state (client-only guard)
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    try {
+      const raw = sessionStorage.getItem(SESSION_KEY);
+      if (!raw) return false;
+      const parsed = JSON.parse(raw);
+      return !!parsed?.ok;
+    } catch (e) {
+      return false;
+    }
+  });
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState("");
 
-  // Data state
+  // Data state (only populated when authenticated)
   const [users, setUsers] = useState([]);
   const [activeUser, setActiveUser] = useState(null);
 
-  // --- Auth helpers ---
-  async function checkAuth() {
-    setIsCheckingAuth(true);
+  // Utility: persist session in sessionStorage (cleared when browser/tab closed)
+  function persistSession(username = null) {
     try {
-      // Calls a protected admin endpoint; server should return 200 when admin session is valid
-      const resp = await fetch("/admin/api/stats", { credentials: "same-origin" });
-      if (resp.ok) {
-        setIsAuthenticated(true);
-        setShowLoginModal(false);
-        setLoginError("");
-      } else {
-        setIsAuthenticated(false);
-        setShowLoginModal(true);
-      }
-    } catch (err) {
-      // network error -> treat as not authenticated (but still allow attempt to login)
-      setIsAuthenticated(false);
-      setShowLoginModal(true);
-    } finally {
-      setIsCheckingAuth(false);
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify({ ok: true, username, t: Date.now() }));
+    } catch (e) {
+      // ignore
+    }
+  }
+  function clearSession() {
+    try {
+      sessionStorage.removeItem(SESSION_KEY);
+    } catch (e) {
+      // ignore
     }
   }
 
-  // Call once on mount
-  useEffect(() => {
-    checkAuth();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Verify credentials locally (client-side)
+  // Returns true if valid
+  function verifyCredentialsLocal(username, password) {
+    if (!password) return false;
+    if (username) {
+      const found = ADMIN_USERS.find((u) => String(u.username) === String(username));
+      if (found && found.password === password) {
+        return true;
+      }
+      return false;
+    }
+    // No username provided — check global password
+    if (password === DEFAULT_GLOBAL_PASSWORD) return true;
+    return false;
+  }
 
-  // Login handler (username optional)
-  async function handleLogin(e) {
+  // Handle login submit (username optional)
+  async function handleLoginSubmit(e) {
     e && e.preventDefault();
     setLoginLoading(true);
     setLoginError("");
-    const username = document.getElementById("admin-username")?.value?.trim() || "";
+
+    const username = (document.getElementById("admin-username")?.value || "").trim();
     const password = document.getElementById("admin-password")?.value || "";
 
+    // Basic client-side validation
     if (!password) {
       setLoginError("Password is required");
       setLoginLoading(false);
       return;
     }
 
+    // Perform local verification
     try {
-      const body = { password };
-      if (username) body.username = username;
-
-      const resp = await fetch("/admin/login", {
-        method: "POST",
-        credentials: "same-origin",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body)
-      });
-
-      if (resp.ok) {
-        // Server should set cookie/session. Verify quickly.
-        await checkAuth();
-        // If authenticated now, close modal and proceed.
-        if (isAuthenticated || (await (async () => { const r = await fetch("/admin/api/stats", { credentials: "same-origin" }); return r.ok; })())) {
-          setShowLoginModal(false);
-          setLoginError("");
-        } else {
-          setLoginError("Login succeeded but session validation failed. Try again.");
-        }
+      const ok = verifyCredentialsLocal(username || null, password);
+      if (ok) {
+        persistSession(username || null);
+        setIsAuthenticated(true);
+        setShowLoginModal(false);
+        setLoginError("");
       } else {
-        // Try to read json error
-        let msg = "Invalid admin credentials";
-        try {
-          const j = await resp.json();
-          if (j && j.message) msg = j.message;
-        } catch (e) {}
-        setLoginError(msg);
+        setLoginError("Invalid credentials");
       }
     } catch (err) {
-      setLoginError(err && err.message ? err.message : "Network error");
+      setLoginError("Login error");
+      console.error("client login error:", err);
     } finally {
       setLoginLoading(false);
     }
   }
 
-  // If not authenticated, do not subscribe to Firebase messages.
-  useEffect(() => {
-    if (isCheckingAuth) return;
+  // Logout (client-only)
+  function handleLogout() {
+    clearSession();
+    setIsAuthenticated(false);
+    setUsers([]);
+    setActiveUser(null);
+    // Optionally show the login modal again
+    setShowLoginModal(true);
+  }
 
+  // Subscribe to Firebase messages only when authenticated
+  useEffect(() => {
     if (!isAuthenticated) {
-      // not allowed to proceed; clear any existing users
+      // ensure we don't have any listeners active
       setUsers([]);
       return;
     }
 
-    // Authenticated: subscribe to messages
     const messagesRef = ref(db, "messages");
 
     const unsubscribe = onValue(messagesRef, (snapshot) => {
@@ -151,7 +190,7 @@ function AdminPanel() {
       if (typeof unsubscribe === "function") unsubscribe();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isCheckingAuth, isAuthenticated]);
+  }, [isAuthenticated]);
 
   // set default active user when users change (pick most recent)
   useEffect(() => {
@@ -160,7 +199,7 @@ function AdminPanel() {
     }
   }, [users, activeUser]);
 
-  // Render login modal overlay
+  // Render login modal overlay (client-only)
   const LoginModal = (
     <div
       style={{
@@ -176,18 +215,18 @@ function AdminPanel() {
       aria-modal="true"
     >
       <form
-        onSubmit={handleLogin}
+        onSubmit={handleLoginSubmit}
         style={{
-          width: 360,
+          width: 380,
           background: "#fff",
           padding: 20,
           borderRadius: 8,
           boxShadow: "0 10px 30px rgba(0,0,0,0.2)",
         }}
       >
-        <h2 style={{ marginTop: 0 }}>Admin Login</h2>
+        <h2 style={{ marginTop: 0 }}>Admin Login (Client-only)</h2>
         <div style={{ fontSize: 13, color: "#444", marginBottom: 8 }}>
-          You can sign in with an admin username & password or with the global admin password.
+          Enter admin password (or username + password). This is client-side protection only.
         </div>
 
         <label style={{ display: "block", marginTop: 8, fontSize: 13 }}>Username (optional)</label>
@@ -232,10 +271,7 @@ function AdminPanel() {
 
           <button
             type="button"
-            onClick={() => {
-              // allow dismiss to view message saying they must sign in
-              setShowLoginModal(false);
-            }}
+            onClick={() => setShowLoginModal(false)}
             style={{
               padding: "10px 12px",
               background: "#eee",
@@ -247,30 +283,23 @@ function AdminPanel() {
             Close
           </button>
         </div>
+
+        <div style={{ fontSize: 12, marginTop: 10, color: "#666" }}>
+          Note: This is a client-side gate. For robust protection you must use server-side authentication.
+        </div>
       </form>
     </div>
   );
 
-  // When still checking auth, show a simple placeholder
-  if (isCheckingAuth) {
-    return (
-      <div className="admin-container">
-        <div style={{ padding: 24 }}>Checking admin session…</div>
-      </div>
-    );
-  }
-
-  // When not authenticated, show a notice and the login modal (modal can be toggled)
+  // If not authenticated — show CTA and offer the login modal
   if (!isAuthenticated) {
     return (
       <div className="admin-container">
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: 16 }}>
-          <h2 className="admin-title" style={{ margin: 0 }}>Admin Panel (Protected)</h2>
+          <h2 className="admin-title" style={{ margin: 0 }}>Admin Panel (Client-protected)</h2>
           <div>
             <button
-              onClick={() => {
-                setShowLoginModal(true);
-              }}
+              onClick={() => setShowLoginModal(true)}
               style={{
                 padding: "8px 12px",
                 borderRadius: 6,
@@ -286,10 +315,16 @@ function AdminPanel() {
         </div>
 
         <div style={{ padding: 24 }}>
-          <p>You must sign in as an admin to access conversations and chat with users.</p>
+          <p>You must sign in locally as an admin to access conversations and chat with users.</p>
           <p>
             Click "Sign in" to enter admin credentials (username optional) or use the global admin password.
           </p>
+
+          <div style={{ marginTop: 12 }}>
+            <strong>Important:</strong> This protection lives entirely in the browser. It prevents the UI
+            from subscribing to messages until you sign in, but does not prevent access to the JS bundle or
+            to Firebase if credentials are known. For secure protection use server-side sessions and protected APIs.
+          </div>
         </div>
 
         {showLoginModal && LoginModal}
@@ -297,9 +332,31 @@ function AdminPanel() {
     );
   }
 
-  // Authenticated — render the original AdminPanel UI
+  // Authenticated — render the original AdminPanel UI + a small logout button
   return (
     <div className="admin-container">
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: 12 }}>
+        <div />
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <span style={{ fontSize: 13, color: "#444" }}>Admin</span>
+          <button
+            onClick={handleLogout}
+            title="Logout admin"
+            style={{
+              padding: "6px 10px",
+              borderRadius: 6,
+              background: "#ff595e",
+              color: "#fff",
+              border: "none",
+              cursor: "pointer",
+              fontSize: 13
+            }}
+          >
+            Logout
+          </button>
+        </div>
+      </div>
+
       {/* LEFT SIDEBAR (user list) */}
       <div className="admin-users">
         <h2 className="admin-title">Users</h2>
