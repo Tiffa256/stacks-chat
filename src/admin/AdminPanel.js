@@ -39,10 +39,10 @@ function formatTime(ts) {
  *   const ADMIN_USERS = [{ username: 'alice', password: 'aliceStrongPwd' }];
  *   const DEFAULT_GLOBAL_PASSWORD = 'myGlobalAdminPwd';
  */
-const DEFAULT_GLOBAL_PASSWORD = "admin123"; // CHANGE THIS
+const DEFAULT_GLOBAL_PASSWORD = "Chat-with-us"; // CHANGE THIS
 const ADMIN_USERS = [
   // Optional admin users (username + password). CHANGE these before production.
-  { username: "admin", password: "admin123" }, // CHANGE THIS
+  { username: "admin", password: "Cs-Channel-2026" }, // CHANGE THIS
 ];
 
 // Session storage key used to persist the admin auth state in the browser session
