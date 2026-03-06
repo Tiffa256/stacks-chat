@@ -7,10 +7,10 @@ import "./Admin.css";
 /*
   AdminApp (client-guarded)
 
-  - Shows a professional landing page with a single top-right "Sign in" button.
-  - A beautiful sign-in card (centered beneath the header) is the primary login UI.
-  - Clicking the top-right "Sign in" opens an optional modal (same fields) — modal only appears when button is clicked.
-  - Client-only protection uses a sessionStorage key; this does NOT replace server-side auth.
+  - Shows introductory text at top, then an inline sign-in card (not a modal).
+  - The sign-in card matches the page colors (dark translucent) and is centered below the intro text.
+  - Page is responsive and works across device sizes.
+  - Client-only protection uses sessionStorage key; this does NOT replace server-side auth.
 */
 
 // Session storage key used by the client-only admin gate
@@ -35,7 +35,6 @@ function AdminAppInner() {
     function syncFromPath() {
       try {
         const path = window.location.pathname || "";
-        // look for /admin/chat/:userId
         const match = path.match(/\/admin\/chat\/([^/]+)/);
         if (match && match[1]) {
           setActiveConversation(decodeURIComponent(match[1]));
@@ -60,7 +59,7 @@ function AdminAppInner() {
   );
 }
 
-function AdminAppWithClientGuard() {
+export default function AdminApp() {
   const [isAuthenticated, setIsAuthenticated] = useState(readClientAuth());
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState("");
@@ -76,9 +75,12 @@ function AdminAppWithClientGuard() {
     return () => window.removeEventListener("storage", onStorage);
   }, []);
 
-  // Primary login handler (used by card and modal)
+  // Background image path (from public folder). Encoded to be safe with spaces.
+  const backgroundImageUrl = encodeURI("/ChatGPT Image Dec 6, 2025, 06_09_52 AM.png");
+
+  // handle login (card or modal)
   async function handleLogin(e, source = "card") {
-    e && e.preventDefault();
+    if (e && typeof e.preventDefault === "function") e.preventDefault();
     setLoginLoading(true);
     setLoginError("");
 
@@ -99,7 +101,7 @@ function AdminAppWithClientGuard() {
 
     try {
       // Client-only acceptance: require non-empty password.
-      // Replace this check with a fixed secret or more complex verification if desired.
+      // Replace this with a secret check if you want a fixed password in the bundle.
       const ok = password.length > 0;
       if (!ok) {
         setLoginError("Invalid credentials");
@@ -107,7 +109,6 @@ function AdminAppWithClientGuard() {
         return;
       }
 
-      // Persist session marker
       try {
         sessionStorage.setItem(SESSION_KEY, JSON.stringify({ ok: true, username: username || null, t: Date.now() }));
       } catch (err) {
@@ -131,11 +132,7 @@ function AdminAppWithClientGuard() {
     setIsAuthenticated(false);
   }
 
-  // Background image from public folder provided by you
-  const bgPath = encodeURI("/ChatGPT Image Dec 6, 2025, 06_09_52 AM.png");
-  const backgroundImageUrl = bgPath;
-
-  // If authenticated, mount the admin UI
+  // If authenticated, render the real admin UI
   if (isAuthenticated) {
     return (
       <>
@@ -156,27 +153,42 @@ function AdminAppWithClientGuard() {
             Logout
           </button>
         </div>
-        <AdminAppInner />
+        <AdminProvider>
+          <AdminAppInner />
+        </AdminProvider>
       </>
     );
   }
 
-  // Not authenticated: show elegant landing page with single sign-in card and modal (modal opens only when top-right button pressed)
+  // Not authenticated: show intro text, THEN inline sign-in card, then footer.
   return (
-    <div style={{ minHeight: "100vh", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" }}>
+    <div style={{ minHeight: "100vh", position: "relative", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" }}>
+      {/* Background */}
       <div
         style={{
           position: "fixed",
           inset: 0,
-          backgroundImage: `linear-gradient(rgba(2,6,23,0.60), rgba(2,6,23,0.60)), url("${backgroundImageUrl}")`,
+          backgroundImage: `linear-gradient(rgba(7,12,25,0.62), rgba(7,12,25,0.62)), url("${backgroundImageUrl}")`,
           backgroundSize: "cover",
           backgroundPosition: "center center",
           zIndex: -1,
-          filter: "saturate(0.98) contrast(1.03)"
+          filter: "saturate(1.02) contrast(1.03)"
         }}
       />
 
-      <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "24px 36px", color: "#fff" }}>
+      {/* Responsive inline CSS for minor tweaks */}
+      <style>
+        {`
+          @media (max-width: 820px) {
+            .admin-hero-grid { grid-template-columns: 1fr; padding: 24px; }
+            .admin-signin-card { max-width: 92%; margin: 0 auto; }
+            .admin-hero-left { text-align: center; }
+          }
+        `}
+      </style>
+
+      {/* Header */}
+      <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "22px 28px", color: "#fff" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <div style={{
             width: 48,
@@ -194,14 +206,20 @@ function AdminAppWithClientGuard() {
           </div>
           <div>
             <div style={{ fontWeight: 800, fontSize: 18 }}>Stacks Chat</div>
-            <div style={{ fontSize: 12, opacity: 0.9 }}>Admin Portal</div>
+            <div style={{ fontSize: 12, opacity: 0.95 }}>Admin Portal</div>
           </div>
         </div>
 
         <div>
-          {/* Top-right sign-in button (only opens modal) */}
+          {/* Top-right sign-in button opens modal (optional) */}
           <button
-            onClick={() => setShowModal(true)}
+            onClick={() => {
+              // scroll to card for users on large screens
+              const el = document.getElementById("admin-signin-card");
+              if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+              // also open modal for convenience
+              setShowModal(true);
+            }}
             style={{
               padding: "10px 16px",
               borderRadius: 10,
@@ -210,7 +228,7 @@ function AdminAppWithClientGuard() {
               border: "1px solid rgba(255,255,255,0.10)",
               cursor: "pointer",
               fontWeight: 700,
-              boxShadow: "0 8px 24px rgba(0,0,0,0.14)"
+              boxShadow: "0 8px 20px rgba(0,0,0,0.14)"
             }}
           >
             Sign in
@@ -218,15 +236,24 @@ function AdminAppWithClientGuard() {
         </div>
       </header>
 
-      <main style={{ display: "flex", justifyContent: "center", padding: "40px 20px 80px 20px" }}>
-        <div style={{ width: "100%", maxWidth: 1100, display: "grid", gridTemplateColumns: "1fr 420px", gap: 32, alignItems: "center" }}>
-          <div style={{ color: "#fff" }}>
-            <h1 style={{ margin: 0, fontSize: 38, fontWeight: 800, lineHeight: 1.02 }}>Welcome to your admin workspace</h1>
-            <p style={{ marginTop: 12, fontSize: 16, color: "rgba(255,255,255,0.92)" }}>
+      {/* Main content: intro text then inline sign-in card */}
+      <main style={{ display: "flex", justifyContent: "center", padding: "36px 20px 60px" }}>
+        <div className="admin-hero-grid" style={{
+          width: "100%",
+          maxWidth: 1100,
+          display: "grid",
+          gridTemplateColumns: "1fr 420px",
+          gap: 32,
+          alignItems: "start"
+        }}>
+          {/* Left: Intro text */}
+          <div className="admin-hero-left" style={{ color: "#fff" }}>
+            <h1 style={{ margin: 0, fontSize: 36, fontWeight: 800 }}>Welcome to your admin workspace</h1>
+            <p style={{ marginTop: 12, fontSize: 16, color: "rgba(255,255,255,0.92)", maxWidth: 680 }}>
               Monitor conversations, assist users, and moderate content with ease. Use the sign-in card to continue.
             </p>
 
-            <div style={{ display: "flex", gap: 12, marginTop: 22 }}>
+            <div style={{ display: "flex", gap: 18, marginTop: 22, flexWrap: "wrap" }}>
               <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
                 <div style={{
                   width: 56, height: 56, borderRadius: 12, background: "rgba(255,255,255,0.06)",
@@ -251,57 +278,59 @@ function AdminAppWithClientGuard() {
             </div>
           </div>
 
-          {/* Single Sign-in Card (primary on page) */}
-          <div id="admin-signin-card" style={{
-            background: "linear-gradient(180deg,#ffffff,#fbfbfb)",
+          {/* Right: Inline Sign-in Card (not a modal) */}
+          <div id="admin-signin-card" className="admin-signin-card" style={{
+            padding: 20,
             borderRadius: 14,
-            padding: 22,
-            boxShadow: "0 30px 70px rgba(4,9,24,0.55)",
-            border: "1px solid rgba(8,18,38,0.06)"
+            background: "linear-gradient(180deg, rgba(10,20,40,0.82), rgba(8,14,30,0.88))",
+            color: "#fff",
+            boxShadow: "0 30px 70px rgba(2,6,23,0.6)",
+            border: "1px solid rgba(255,255,255,0.04)",
+            display: "flex",
+            flexDirection: "column",
+            gap: 12,
+            alignSelf: "center",
+            width: "100%",
+            maxWidth: 420,
+            boxSizing: "border-box"
           }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-              <div>
-                <div style={{ fontSize: 20, fontWeight: 800, color: "#071035" }}>Administrator sign in</div>
-                <div style={{ fontSize: 13, color: "#475569", marginTop: 4 }}>Enter your credentials to access the admin tools</div>
-              </div>
+            <div>
+              <div style={{ fontSize: 20, fontWeight: 800 }}>Administrator sign in</div>
+              <div style={{ marginTop: 6, color: "rgba(255,255,255,0.85)", fontSize: 13 }}>Secure access to the admin tools</div>
             </div>
 
-            <form onSubmit={(e) => handleLogin(e, "card")} style={{ marginTop: 14 }}>
-              <label style={{ display: "block", fontSize: 13, color: "#334155", marginBottom: 6 }}>Username (optional)</label>
+            <form onSubmit={(e) => handleLogin(e, "card")} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <label style={{ fontSize: 13, color: "rgba(255,255,255,0.86)" }}>Username (optional)</label>
               <input id="admin-username" placeholder="admin (optional)"
                 style={{
-                  width: "100%",
                   padding: "10px 12px",
                   borderRadius: 10,
-                  border: "1px solid rgba(8,18,38,0.06)",
-                  background: "#fff",
-                  color: "#071035",
+                  border: "1px solid rgba(255,255,255,0.06)",
+                  background: "rgba(255,255,255,0.03)",
+                  color: "#fff",
                   outline: "none",
-                  fontSize: 14,
-                  boxSizing: "border-box"
+                  fontSize: 14
                 }} />
 
-              <label style={{ display: "block", fontSize: 13, color: "#334155", marginTop: 12, marginBottom: 6 }}>Password</label>
+              <label style={{ fontSize: 13, color: "rgba(255,255,255,0.86)" }}>Password</label>
               <input id="admin-password" placeholder="Password" type="password"
                 style={{
-                  width: "100%",
                   padding: "10px 12px",
                   borderRadius: 10,
-                  border: "1px solid rgba(8,18,38,0.06)",
-                  background: "#fff",
-                  color: "#071035",
+                  border: "1px solid rgba(255,255,255,0.06)",
+                  background: "rgba(255,255,255,0.03)",
+                  color: "#fff",
                   outline: "none",
-                  fontSize: 14,
-                  boxSizing: "border-box"
+                  fontSize: 14
                 }} />
 
               {loginError && (
-                <div style={{ color: "#b91c1c", marginTop: 10, fontSize: 13 }}>
+                <div style={{ color: "#ffb4b4", marginTop: 4, fontSize: 13 }}>
                   {loginError}
                 </div>
               )}
 
-              <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+              <div style={{ display: "flex", gap: 10, marginTop: 6 }}>
                 <button
                   type="submit"
                   disabled={loginLoading}
@@ -309,12 +338,12 @@ function AdminAppWithClientGuard() {
                     flex: 1,
                     padding: "12px 14px",
                     borderRadius: 10,
-                    background: "linear-gradient(90deg,#2563eb,#06b6d4)",
-                    color: "#fff",
+                    background: "linear-gradient(90deg,#06b6d4,#2563eb)",
+                    color: "#071035",
                     border: "none",
                     fontWeight: 800,
                     cursor: "pointer",
-                    boxShadow: "0 14px 40px rgba(37,99,235,0.14)"
+                    boxShadow: "0 14px 40px rgba(4,9,24,0.5)"
                   }}
                 >
                   {loginLoading ? "Signing in..." : "Sign in"}
@@ -333,8 +362,8 @@ function AdminAppWithClientGuard() {
                     padding: "12px 14px",
                     borderRadius: 10,
                     background: "transparent",
-                    color: "#071035",
-                    border: "1px solid rgba(8,18,38,0.06)",
+                    color: "#fff",
+                    border: "1px solid rgba(255,255,255,0.06)",
                     cursor: "pointer",
                     fontWeight: 700
                   }}
@@ -343,45 +372,47 @@ function AdminAppWithClientGuard() {
                 </button>
               </div>
 
-              <div style={{ marginTop: 12, fontSize: 12, color: "#64748b" }}>
-                If you don't have access, contact <a href="mailto:support@example.com" style={{ color: "#2563eb" }}>support@example.com</a>.
+              <div style={{ marginTop: 8, fontSize: 12, color: "rgba(255,255,255,0.75)" }}>
+                If you don't have access, contact <a href="mailto:support@example.com" style={{ color: "#a5f3fc" }}>support@example.com</a>.
               </div>
             </form>
           </div>
         </div>
       </main>
 
-      <footer style={{ textAlign: "center", padding: "18px 20px", color: "rgba(255,255,255,0.85)", fontSize: 13 }}>
+      {/* Footer */}
+      <footer style={{ textAlign: "center", padding: "18px 20px", color: "rgba(255,255,255,0.9)", fontSize: 13 }}>
         © {new Date().getFullYear()} Stacks Chat — Admin
       </footer>
 
-      {/* Modal (only opens when top-right Sign in clicked) */}
+      {/* Optional modal (appears when Sign in button clicked) */}
       {showModal && (
         <div
           onClick={() => setShowModal(false)}
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(2,6,23,0.65)",
+            background: "rgba(2,6,23,0.68)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            zIndex: 2000
+            zIndex: 2200
           }}
         >
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
               width: 420,
-              background: "#ffffff",
+              background: "#0b1220",
               borderRadius: 12,
-              padding: 22,
-              boxShadow: "0 30px 70px rgba(2,6,23,0.55)",
-              border: "1px solid rgba(8,18,38,0.06)"
+              padding: 20,
+              boxShadow: "0 30px 70px rgba(2,6,23,0.6)",
+              border: "1px solid rgba(255,255,255,0.04)",
+              color: "#fff"
             }}
           >
-            <h3 style={{ margin: "0 0 10px 0", color: "#071035" }}>Admin sign in</h3>
-            <div style={{ marginBottom: 12, color: "#475569", fontSize: 13 }}>
+            <h3 style={{ margin: "0 0 8px 0" }}>Administrator sign in</h3>
+            <div style={{ marginBottom: 12, color: "rgba(255,255,255,0.75)", fontSize: 13 }}>
               Use your administrator credentials.
             </div>
 
@@ -391,9 +422,9 @@ function AdminAppWithClientGuard() {
                   width: "100%",
                   padding: "10px 12px",
                   borderRadius: 8,
-                  border: "1px solid rgba(8,18,38,0.06)",
-                  background: "#fff",
-                  color: "#071035",
+                  border: "1px solid rgba(255,255,255,0.06)",
+                  background: "rgba(255,255,255,0.02)",
+                  color: "#fff",
                   outline: "none",
                   fontSize: 14
                 }} />
@@ -405,15 +436,15 @@ function AdminAppWithClientGuard() {
                   width: "100%",
                   padding: "10px 12px",
                   borderRadius: 8,
-                  border: "1px solid rgba(8,18,38,0.06)",
-                  background: "#fff",
-                  color: "#071035",
+                  border: "1px solid rgba(255,255,255,0.06)",
+                  background: "rgba(255,255,255,0.02)",
+                  color: "#fff",
                   outline: "none",
                   fontSize: 14
                 }} />
             </div>
 
-            {loginError && <div style={{ color: "#b91c1c", marginBottom: 10 }}>{loginError}</div>}
+            {loginError && <div style={{ color: "#ff8b8b", marginBottom: 10 }}>{loginError}</div>}
 
             <div style={{ display: "flex", gap: 8 }}>
               <button
@@ -422,8 +453,8 @@ function AdminAppWithClientGuard() {
                   flex: 1,
                   padding: "10px 12px",
                   borderRadius: 8,
-                  background: "linear-gradient(90deg,#2563eb,#06b6d4)",
-                  color: "#fff",
+                  background: "linear-gradient(90deg,#06b6d4,#2563eb)",
+                  color: "#071035",
                   border: "none",
                   fontWeight: 700,
                   cursor: "pointer"
@@ -438,8 +469,8 @@ function AdminAppWithClientGuard() {
                   padding: "10px 12px",
                   borderRadius: 8,
                   background: "transparent",
-                  color: "#071035",
-                  border: "1px solid rgba(8,18,38,0.06)",
+                  color: "#fff",
+                  border: "1px solid rgba(255,255,255,0.06)",
                   cursor: "pointer",
                   fontWeight: 700
                 }}
@@ -451,13 +482,5 @@ function AdminAppWithClientGuard() {
         </div>
       )}
     </div>
-  );
-}
-
-export default function AdminApp() {
-  return (
-    <AdminProvider>
-      <AdminAppWithClientGuard />
-    </AdminProvider>
   );
 }
