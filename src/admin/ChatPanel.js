@@ -17,6 +17,41 @@ import ChatMessage from "./ChatMessage";
 import DateSeparator from "./DateSeparator";
 import { supabase } from "../supabaseClient"; // kept for compatibility with other handlers
 
+// --------------------------- PROTECTION CONFIG ---------------------------
+// Protect specific conversations client-side (Giulia). Replace password value.
+const PROTECTED_CHATS = {
+  Giulia: "@money-2026" // <-- set the password you want for Giulia here
+};
+const UNLOCKED_KEY = "unlockedProtectedChats_client_v1";
+
+function readUnlocked() {
+  try {
+    const raw = localStorage.getItem(UNLOCKED_KEY);
+    if (!raw) return [];
+    return JSON.parse(raw) || [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function addUnlocked(userId) {
+  try {
+    const list = readUnlocked();
+    if (!list.includes(userId)) {
+      list.push(userId);
+      localStorage.setItem(UNLOCKED_KEY, JSON.stringify(list));
+      // broadcast storage event for other tabs
+      try {
+        window.dispatchEvent(new StorageEvent("storage", { key: UNLOCKED_KEY, newValue: JSON.stringify(list) }));
+      } catch (e) {
+        /* ignore */
+      }
+    }
+  } catch (e) {}
+}
+
+// ------------------------- End protection config -------------------------
+
 function formatDateHeader(ts) {
   if (!ts) return "";
   const d = new Date(ts);
@@ -51,6 +86,13 @@ export default function ChatPanel() {
   const bodyRef = useRef(null); // the scrolling container
   const isAtBottomRef = useRef(true); // track whether user is at bottom
 
+  // Protection state
+  const [isProtected, setIsProtected] = useState(false);
+  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [showUnlockModal, setShowUnlockModal] = useState(false);
+  const [unlockPwd, setUnlockPwd] = useState("");
+  const [unlockError, setUnlockError] = useState("");
+
   // helper to scroll to bottom
   const scrollToBottom = useCallback((behavior = "smooth") => {
     const el = bodyRef.current;
@@ -84,7 +126,45 @@ export default function ChatPanel() {
     };
   }, []);
 
-  // subscribe to messages
+  // Update protection state when activeConversation changes or when unlocked list changes
+  useEffect(() => {
+    const check = () => {
+      if (!activeConversation) {
+        setIsProtected(false);
+        setIsUnlocked(false);
+        return;
+      }
+      const prot = PROTECTED_CHATS && Object.prototype.hasOwnProperty.call(PROTECTED_CHATS, activeConversation);
+      setIsProtected(Boolean(prot));
+      if (!prot) {
+        setIsUnlocked(true);
+        setShowUnlockModal(false);
+      } else {
+        const unlockedList = readUnlocked();
+        const unlocked = unlockedList.includes(activeConversation);
+        setIsUnlocked(unlocked);
+        // If protected and not unlocked, do not auto-open chat; show modal
+        if (!unlocked) {
+          setShowUnlockModal(true);
+        } else {
+          setShowUnlockModal(false);
+        }
+      }
+    };
+
+    check();
+
+    // Listen for cross-tab unlocked changes
+    function onStorage(e) {
+      if (e.key === UNLOCKED_KEY) {
+        check();
+      }
+    }
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, [activeConversation]);
+
+  // subscribe to messages ONLY when conversation present AND (not protected OR unlocked)
   useEffect(() => {
     if (!activeConversation) {
       setMessages([]);
@@ -92,6 +172,13 @@ export default function ChatPanel() {
       return;
     }
 
+    if (isProtected && !isUnlocked) {
+      // Do not subscribe to Firebase for protected locked conversation
+      setMessages([]);
+      return;
+    }
+
+    // Normal subscription flow
     const unsub = subscribeToMessages(activeConversation, (msgs) => {
       // msgs is expected to be an array
       setMessages(msgs);
@@ -99,19 +186,19 @@ export default function ChatPanel() {
       // After DOM updates, scroll only if user was at bottom
       setTimeout(() => {
         if (isAtBottomRef.current) {
-          // user is at bottom => auto-scroll
           if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
           scrollRef.current?.scrollIntoView({ behavior: "smooth" });
           setShowJump(false);
         } else {
-          // user has scrolled up: don't auto-scroll; show jump button
           setShowJump(true);
         }
       }, 60);
     });
 
-    return () => unsub && unsub();
-  }, [activeConversation]);
+    return () => {
+      if (typeof unsub === "function") unsub();
+    };
+  }, [activeConversation, isProtected, isUnlocked]);
 
   const messageById = messages.reduce((acc, m) => {
     acc[m.id] = m;
@@ -136,6 +223,10 @@ export default function ChatPanel() {
 
   const handleSendText = async (text) => {
     if (!activeConversation) return;
+    if (isProtected && !isUnlocked) {
+      alert("This conversation is protected. Unlock it before sending messages.");
+      return;
+    }
 
     try {
       await sendTextMessage(
@@ -157,6 +248,10 @@ export default function ChatPanel() {
 
   const handleSendFile = async (file, onProgress) => {
     if (!activeConversation || !sendFileMessage) return;
+    if (isProtected && !isUnlocked) {
+      alert("This conversation is protected. Unlock it before sending files.");
+      return;
+    }
     const tempId = `upload_${Date.now()}`;
     setUploads((u) => ({
       ...u,
@@ -190,6 +285,10 @@ export default function ChatPanel() {
 
   const handleDelete = async (message) => {
     if (!activeConversation || !message?.id) return;
+    if (isProtected && !isUnlocked) {
+      alert("This conversation is protected. Unlock it before deleting messages.");
+      return;
+    }
     try {
       await firebaseDeleteMessage(activeConversation, message.id);
       setMessages((prev) => prev.filter((m) => m.id !== message.id));
@@ -251,8 +350,6 @@ export default function ChatPanel() {
   }, [activeConversation]);
 
   // NEW: Hide conversation locally from admin panel only (no DB changes)
-  // This stores the hidden conversation id in localStorage under "hiddenConversations"
-  // and clears the activeConversation in the UI.
   const handleHideConversationLocally = useCallback(() => {
     if (!activeConversation) return;
     const ok = window.confirm(
@@ -261,7 +358,6 @@ export default function ChatPanel() {
     if (!ok) return;
 
     try {
-      // Read existing hidden list
       const raw = localStorage.getItem("hiddenConversations");
       let hidden = [];
       if (raw) {
@@ -281,19 +377,12 @@ export default function ChatPanel() {
       setMessages([]);
       setReplyTo(null);
 
-      // Clear active conversation in context (if available)
-      if (typeof setActiveConversation === "function") {
-        setActiveConversation(null);
-      }
+      setActiveConversation(null);
 
-      // Update URL to /admin so AdminApp syncs to no active chat
       try {
         window.history.pushState({}, "", "/admin");
         window.dispatchEvent(new PopStateEvent("popstate"));
-      } catch (e) {
-        // ignore; not critical
-      }
-
+      } catch (e) {}
       alert("Conversation removed from this panel. To restore, remove it from the browser's localStorage key 'hiddenConversations'.");
     } catch (err) {
       console.error("Failed to hide conversation locally:", err);
@@ -301,9 +390,194 @@ export default function ChatPanel() {
     }
   }, [activeConversation, setActiveConversation]);
 
-  if (!activeConversation)
-    return <div className="empty-state">Select a conversation</div>;
+  // Unlock modal submit
+  const submitUnlock = (e) => {
+    e && e.preventDefault();
+    if (!activeConversation) return;
+    const expected = PROTECTED_CHATS[activeConversation];
+    if (unlockPwd === expected) {
+      addUnlocked(activeConversation);
+      setIsUnlocked(true);
+      setShowUnlockModal(false);
+      setUnlockPwd("");
+      setUnlockError("");
+    } else {
+      setUnlockError("Incorrect password");
+    }
+  };
 
+  // If no active conversation selected show placeholder
+  if (!activeConversation) return <div className="empty-state">Select a conversation</div>;
+
+  // If conversation is protected & not unlocked -> show locked UI overlay (no messages/subscriptions)
+  if (isProtected && !isUnlocked) {
+    return (
+      <div className="admin-chat" style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+        <div style={{ width: "100%", maxWidth: 920 }}>
+          <div style={{
+            borderRadius: 12,
+            padding: 28,
+            background: "linear-gradient(180deg,#0b1220,#07122a)",
+            color: "#fff",
+            boxShadow: "0 18px 60px rgba(2,6,23,0.6)"
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+              <div style={{
+                width: 70,
+                height: 70,
+                borderRadius: 10,
+                background: "linear-gradient(90deg,#06b6d4,#2563eb)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 28,
+                color: "#fff",
+                fontWeight: 800
+              }}>🔒</div>
+
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 20, fontWeight: 800 }}>Conversation locked</div>
+                <div style={{ color: "rgba(255,255,255,0.85)", marginTop: 6 }}>
+                  The conversation with <strong>{activeConversation}</strong> is protected. Enter the password to unlock and view messages.
+                </div>
+                <div style={{ marginTop: 12, display: "flex", gap: 10 }}>
+                  <button
+                    onClick={() => setShowUnlockModal(true)}
+                    style={{
+                      padding: "10px 14px",
+                      borderRadius: 10,
+                      background: "linear-gradient(90deg,#06b6d4,#2563eb)",
+                      color: "#071035",
+                      border: "none",
+                      fontWeight: 700,
+                      cursor: "pointer"
+                    }}
+                  >
+                    Unlock conversation
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      // navigate back to /admin list
+                      setActiveConversation(null);
+                      try {
+                        window.history.pushState({}, "", "/admin");
+                        window.dispatchEvent(new PopStateEvent("popstate"));
+                      } catch (e) {}
+                    }}
+                    style={{
+                      padding: "10px 14px",
+                      borderRadius: 10,
+                      background: "transparent",
+                      color: "#fff",
+                      border: "1px solid rgba(255,255,255,0.06)",
+                      cursor: "pointer",
+                      fontWeight: 700
+                    }}
+                  >
+                    Return to list
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Unlock modal (dialog) */}
+          {showUnlockModal && (
+            <div
+              role="dialog"
+              aria-modal="true"
+              onClick={() => { setShowUnlockModal(false); setUnlockError(""); }}
+              style={{
+                position: "fixed",
+                inset: 0,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "rgba(2,6,23,0.55)",
+                zIndex: 3000
+              }}
+            >
+              <div
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  width: 380,
+                  maxWidth: "94%",
+                  background: "#fff",
+                  borderRadius: 12,
+                  padding: 18,
+                  boxShadow: "0 20px 60px rgba(2,6,23,0.3)"
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                  <div>
+                    <div style={{ fontSize: 16, fontWeight: 800 }}>Unlock conversation</div>
+                    <div style={{ fontSize: 13, color: "#374151", marginTop: 4 }}>Enter password to open <strong>{activeConversation}</strong></div>
+                  </div>
+                  <button
+                    aria-label="Close"
+                    onClick={() => { setShowUnlockModal(false); setUnlockError(""); }}
+                    style={{ background: "transparent", border: "none", fontSize: 18, cursor: "pointer" }}
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <form onSubmit={submitUnlock}>
+                  <label style={{ fontSize: 13, color: "#374151" }}>Password</label>
+                  <input
+                    autoFocus
+                    value={unlockPwd}
+                    onChange={(e) => setUnlockPwd(e.target.value)}
+                    type="password"
+                    placeholder="Enter password"
+                    style={{
+                      width: "100%",
+                      padding: "10px 12px",
+                      borderRadius: 8,
+                      border: "1px solid #e6e7eb",
+                      marginTop: 8,
+                      marginBottom: 6,
+                      boxSizing: "border-box"
+                    }}
+                  />
+                  {unlockError && <div style={{ color: "#b91c1c", marginBottom: 8 }}>{unlockError}</div>}
+
+                  <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                    <button type="submit" style={{
+                      flex: 1,
+                      padding: "10px 12px",
+                      borderRadius: 8,
+                      background: "linear-gradient(90deg,#06b6d4,#2563eb)",
+                      border: "none",
+                      color: "#07203a",
+                      fontWeight: 700,
+                      cursor: "pointer"
+                    }}>
+                      Unlock
+                    </button>
+                    <button type="button" onClick={() => { setShowUnlockModal(false); setUnlockError(""); }} style={{
+                      padding: "10px 12px",
+                      borderRadius: 8,
+                      background: "transparent",
+                      border: "1px solid #e6e7eb",
+                      color: "#374151",
+                      cursor: "pointer",
+                      fontWeight: 700
+                    }}>
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Normal chat UI when not protected or unlocked
   return (
     <div className="admin-chat">
       <div className="chat-stage" style={{ position: "relative" }}>
@@ -374,8 +648,6 @@ export default function ChatPanel() {
         </div>
 
         <div className="adminchat-body" ref={bodyRef}>
-          {/* messages-inner is a constrained column centered in chat-stage.
-              adminchat-body is the scroll container (so scrolling is stable). */}
           <div className="messages-inner">
             {grouped.length === 0 ? (
               <div className="no-msg">No messages yet</div>
