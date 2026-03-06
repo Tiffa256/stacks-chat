@@ -7,10 +7,11 @@ import "./Admin.css";
 /*
   AdminApp (client-guarded)
 
-  - Shows introductory text at top, then an inline sign-in card (not a modal).
-  - The sign-in card matches the page colors (dark translucent) and is centered below the intro text.
-  - Page is responsive and works across device sizes.
-  - Client-only protection uses sessionStorage key; this does NOT replace server-side auth.
+  - Intro text and feature highlights are shown on the landing page.
+  - There is a single top-right "Sign in" button. The inline sign-in card has been removed
+    as requested. The sign-in process happens via a modal opened by that button.
+  - Client-only protection uses a sessionStorage key; this does NOT replace server-side auth.
+  - When signed in (client-side), the Admin UI mounts.
 */
 
 // Session storage key used by the client-only admin gate
@@ -75,23 +76,17 @@ export default function AdminApp() {
     return () => window.removeEventListener("storage", onStorage);
   }, []);
 
-  // Background image path (from public folder). Encoded to be safe with spaces.
+  // Background image path (from public folder). Encode in case of spaces.
   const backgroundImageUrl = encodeURI("/ChatGPT Image Dec 6, 2025, 06_09_52 AM.png");
 
-  // handle login (card or modal)
-  async function handleLogin(e, source = "card") {
+  // Primary login handler (modal)
+  async function handleLogin(e) {
     if (e && typeof e.preventDefault === "function") e.preventDefault();
     setLoginLoading(true);
     setLoginError("");
 
-    const username =
-      (source === "modal"
-        ? document.getElementById("modal-admin-username")?.value?.trim()
-        : document.getElementById("admin-username")?.value?.trim()) || "";
-    const password =
-      (source === "modal"
-        ? document.getElementById("modal-admin-password")?.value
-        : document.getElementById("admin-password")?.value) || "";
+    const username = document.getElementById("modal-admin-username")?.value?.trim() || "";
+    const password = document.getElementById("modal-admin-password")?.value || "";
 
     if (!password) {
       setLoginError("Password is required");
@@ -132,7 +127,7 @@ export default function AdminApp() {
     setIsAuthenticated(false);
   }
 
-  // If authenticated, render the real admin UI
+  // If authenticated, render the admin UI
   if (isAuthenticated) {
     return (
       <>
@@ -160,7 +155,7 @@ export default function AdminApp() {
     );
   }
 
-  // Not authenticated: show intro text, THEN inline sign-in card, then footer.
+  // Not authenticated: landing page with intro, features, and a single top-right Sign in button
   return (
     <div style={{ minHeight: "100vh", position: "relative", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" }}>
       {/* Background */}
@@ -176,16 +171,13 @@ export default function AdminApp() {
         }}
       />
 
-      {/* Responsive inline CSS for minor tweaks */}
-      <style>
-        {`
-          @media (max-width: 820px) {
-            .admin-hero-grid { grid-template-columns: 1fr; padding: 24px; }
-            .admin-signin-card { max-width: 92%; margin: 0 auto; }
-            .admin-hero-left { text-align: center; }
-          }
-        `}
-      </style>
+      {/* Responsive tweaks */}
+      <style>{`
+        @media (max-width: 900px) {
+          .hero-grid { grid-template-columns: 1fr; padding: 20px; }
+          .hero-left { text-align: center; }
+        }
+      `}</style>
 
       {/* Header */}
       <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "22px 28px", color: "#fff" }}>
@@ -211,15 +203,9 @@ export default function AdminApp() {
         </div>
 
         <div>
-          {/* Top-right sign-in button opens modal (optional) */}
+          {/* Top-right sign-in button opens modal */}
           <button
-            onClick={() => {
-              // scroll to card for users on large screens
-              const el = document.getElementById("admin-signin-card");
-              if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
-              // also open modal for convenience
-              setShowModal(true);
-            }}
+            onClick={() => setShowModal(true)}
             style={{
               padding: "10px 16px",
               borderRadius: 10,
@@ -236,21 +222,14 @@ export default function AdminApp() {
         </div>
       </header>
 
-      {/* Main content: intro text then inline sign-in card */}
+      {/* Main: Intro text then feature bullets (no inline card) */}
       <main style={{ display: "flex", justifyContent: "center", padding: "36px 20px 60px" }}>
-        <div className="admin-hero-grid" style={{
-          width: "100%",
-          maxWidth: 1100,
-          display: "grid",
-          gridTemplateColumns: "1fr 420px",
-          gap: 32,
-          alignItems: "start"
-        }}>
-          {/* Left: Intro text */}
-          <div className="admin-hero-left" style={{ color: "#fff" }}>
+        <div className="hero-grid" style={{ width: "100%", maxWidth: 1100, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32, alignItems: "center" }}>
+          {/* Left: Intro copy */}
+          <div className="hero-left" style={{ color: "#fff" }}>
             <h1 style={{ margin: 0, fontSize: 36, fontWeight: 800 }}>Welcome to your admin workspace</h1>
             <p style={{ marginTop: 12, fontSize: 16, color: "rgba(255,255,255,0.92)", maxWidth: 680 }}>
-              Monitor conversations, assist users, and moderate content with ease. Use the sign-in card to continue.
+              Monitor conversations, assist users, and moderate content with ease. Use the sign-in button to continue to the admin workspace.
             </p>
 
             <div style={{ display: "flex", gap: 18, marginTop: 22, flexWrap: "wrap" }}>
@@ -278,12 +257,51 @@ export default function AdminApp() {
             </div>
           </div>
 
-      {/* Footer */}
+          {/* Right: Decorative panel prompting sign-in (inline, not a card for credentials) */}
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center"
+          }}>
+            <div style={{
+              width: "100%",
+              maxWidth: 420,
+              borderRadius: 14,
+              padding: 24,
+              background: "linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))",
+              border: "1px solid rgba(255,255,255,0.06)",
+              boxShadow: "0 18px 50px rgba(2,6,23,0.55)",
+              color: "#fff",
+              textAlign: "center"
+            }}>
+              <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 8 }}>Ready to manage</div>
+              <div style={{ color: "rgba(255,255,255,0.88)", marginBottom: 14 }}>Click the Sign in button at the top-right to open the secure sign-in dialog.</div>
+
+              <button
+                onClick={() => setShowModal(true)}
+                style={{
+                  padding: "12px 18px",
+                  borderRadius: 10,
+                  background: "linear-gradient(90deg,#06b6d4,#2563eb)",
+                  color: "#071035",
+                  border: "none",
+                  fontWeight: 800,
+                  cursor: "pointer",
+                  boxShadow: "0 12px 32px rgba(6,182,212,0.12)"
+                }}
+              >
+                Open sign-in
+              </button>
+            </div>
+          </div>
+        </div>
+      </main>
+
       <footer style={{ textAlign: "center", padding: "18px 20px", color: "rgba(255,255,255,0.9)", fontSize: 13 }}>
         © {new Date().getFullYear()} Stacks Chat — Admin
       </footer>
 
-      {/* Optional modal (appears when Sign in button clicked) */}
+      {/* Modal for credentials (only modal now) */}
       {showModal && (
         <div
           onClick={() => setShowModal(false)}
@@ -301,9 +319,10 @@ export default function AdminApp() {
             onClick={(e) => e.stopPropagation()}
             style={{
               width: 420,
+              maxWidth: "92%",
               background: "#0b1220",
               borderRadius: 12,
-              padding: 20,
+              padding: 22,
               boxShadow: "0 30px 70px rgba(2,6,23,0.6)",
               border: "1px solid rgba(255,255,255,0.04)",
               color: "#fff"
@@ -346,7 +365,7 @@ export default function AdminApp() {
 
             <div style={{ display: "flex", gap: 8 }}>
               <button
-                onClick={(e) => handleLogin(e, "modal")}
+                onClick={(e) => handleLogin(e)}
                 style={{
                   flex: 1,
                   padding: "10px 12px",
