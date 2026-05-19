@@ -1,3 +1,4 @@
+// src/admin/AdminPanel.js
 import React, { useEffect, useState } from "react";
 import { ref, onValue } from "firebase/database";
 import AdminChat from "./AdminChat";
@@ -12,28 +13,25 @@ function formatTime(ts) {
 /**
  * Client-only admin protection configuration.
  *
- * WARNING:
- * - These values live in client JS. Anyone with access to the bundle can view them.
- * - For stronger security, implement server-side authentication and session cookies.
+ * SECURITY NOTE:
+ * - Any secret in client-side JS (including REACT_APP_ env variables baked into the build)
+ *   is visible to anyone who downloads the bundle. Use server-side auth for production security.
  *
- * QUICK USAGE:
- * - Set REACT_APP_ADMIN_PASSWORD in your environment (.env) for the global admin password.
- * - Optionally add entries to ADMIN_USERS to require username+password. DO NOT commit secrets.
- *
- * Example .env (do NOT commit this file):
- * REACT_APP_ADMIN_PASSWORD=YourStr0ngAdminPasswordHere
- *
- * Note: Using an env var only avoids hard-coding a password in source. It does not make the client secure.
+ * USAGE:
+ * - Set REACT_APP_ADMIN_PASSWORD in your host (Render/Netlify/Vercel) or in a local .env and rebuild.
+ * - Optionally set ADMIN_USERS below (do NOT commit real passwords).
  */
-const DEFAULT_GLOBAL_PASSWORD = process.env.REACT_APP_ADMIN_PASSWORD || "dev-temporary";
+const DEFAULT_GLOBAL_PASSWORD = (process.env.REACT_APP_ADMIN_PASSWORD || "").trim(); // empty by default
 const ADMIN_USERS = [
-  // Optional admin users (username + password). Change/remove before production.
-  // Example: { username: "admin", password: "yourStrongPassword" }
-  // { username: "admin", password: "@@Cs-Channel-2026" }, // if present, change this before production
+  // Optional admin users (username + password). Do not commit real credentials.
+  // Example: { username: "admin", password: "YourStrongPassword" }
 ];
 
 // Session storage key used to persist the admin auth state in the browser session
 const SESSION_KEY = "client_admin_authenticated_v1";
+
+// Toggle debug logging for troubleshooting (set to false in production)
+const DEBUG = false;
 
 function AdminPanel() {
   // Authentication state (client-only guard)
@@ -42,7 +40,11 @@ function AdminPanel() {
       const raw = sessionStorage.getItem(SESSION_KEY);
       if (!raw) return false;
       const parsed = JSON.parse(raw);
-      return !!parsed?.ok;
+      // require ok:true and a timestamp t that is recent (12 hours)
+      if (!parsed?.ok || !parsed?.t) return false;
+      const age = Date.now() - Number(parsed.t || 0);
+      const maxAge = 1000 * 60 * 60 * 12; // 12 hours
+      return age > 0 && age < maxAge;
     } catch (e) {
       return false;
     }
@@ -75,20 +77,34 @@ function AdminPanel() {
   // Returns true only when password exactly matches the configured global password
   // OR when username+password exactly match an entry in ADMIN_USERS.
   function verifyCredentialsLocal(username, password) {
-    // require a non-empty string password
-    if (typeof password !== "string" || !password.trim()) return false;
-    const candidate = password.trim();
+    try {
+      if (typeof password !== "string" || !password.trim()) return false;
+      const candidate = password.trim();
+      if (username && String(username).trim()) {
+        const uname = String(username).trim();
+        const found = ADMIN_USERS.find((u) => String(u.username) === uname);
+        if (!found) {
+          if (DEBUG) console.debug("[admin] verify: username not found", { uname });
+          return false;
+        }
+        const expected = String(found.password || "").trim();
+        const matched = expected !== "" && expected === candidate;
+        if (DEBUG) console.debug("[admin] verify username", { uname, matched });
+        return matched;
+      }
 
-    if (username && String(username).trim()) {
-      const uname = String(username).trim();
-      const found = ADMIN_USERS.find((u) => String(u.username) === uname);
-      if (!found) return false;
-      const expected = String(found.password || "").trim();
-      return expected === candidate;
+      // No username provided — require a configured global password
+      if (!DEFAULT_GLOBAL_PASSWORD) {
+        if (DEBUG) console.debug("[admin] verify: no global password configured; rejecting login");
+        return false;
+      }
+      const matched = candidate === DEFAULT_GLOBAL_PASSWORD;
+      if (DEBUG) console.debug("[admin] verify global", { matched });
+      return matched;
+    } catch (err) {
+      if (DEBUG) console.error("[admin] verify error", err);
+      return false;
     }
-
-    // No username provided — check the single global password exactly (after trimming)
-    return candidate === String(DEFAULT_GLOBAL_PASSWORD).trim();
   }
 
   // Handle login submit (username optional)
@@ -110,6 +126,7 @@ function AdminPanel() {
     // Perform local verification
     try {
       const ok = verifyCredentialsLocal(username || null, password);
+      if (DEBUG) console.debug("[admin] login attempt", { usernameProvided: !!username, ok });
       if (ok) {
         persistSession(username || null);
         setIsAuthenticated(true);
