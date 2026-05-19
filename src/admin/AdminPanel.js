@@ -1,18 +1,3 @@
-// src/admin/AdminPanel.js
-// Ensure we read from the "messages" root (NOT "chats") so admin opens the same path users write to.
-//
-// NOTE (IMPORTANT):
-// This file implements a client-only gate (no server/API calls) so that the admin UI
-// will not subscribe to Firebase or show conversations until a local admin password
-// (or username+password) is entered. This is a convenience / light-weight protection
-// for cases where you explicitly requested "no server or api needed" — but it is NOT
-// a substitute for server-side authentication. Client-only protection can be bypassed
-// by retrieving the JS bundle or inspecting code in the browser. Use only if you
-// understand and accept this limitation.
-//
-// To make this usable immediately, a default password is provided below. Change the
-// DEFAULT_GLOBAL_PASSWORD and ADMIN_USERS entries before deploying to production.
-
 import React, { useEffect, useState } from "react";
 import { ref, onValue } from "firebase/database";
 import AdminChat from "./AdminChat";
@@ -32,17 +17,19 @@ function formatTime(ts) {
  * - For stronger security, implement server-side authentication and session cookies.
  *
  * QUICK USAGE:
- * - Replace DEFAULT_GLOBAL_PASSWORD with your chosen global admin password.
- * - Optionally add entries to ADMIN_USERS to require username+password.
+ * - Set REACT_APP_ADMIN_PASSWORD in your environment (.env) for the global admin password.
+ * - Optionally add entries to ADMIN_USERS to require username+password. DO NOT commit secrets.
  *
- * Example:
- *   const ADMIN_USERS = [{ username: 'alice', password: 'aliceStrongPwd' }];
- *   const DEFAULT_GLOBAL_PASSWORD = 'myGlobalAdminPwd';
+ * Example .env (do NOT commit this file):
+ * REACT_APP_ADMIN_PASSWORD=YourStr0ngAdminPasswordHere
+ *
+ * Note: Using an env var only avoids hard-coding a password in source. It does not make the client secure.
  */
-const DEFAULT_GLOBAL_PASSWORD = "Chat-with-us"; // CHANGE THIS
+const DEFAULT_GLOBAL_PASSWORD = process.env.REACT_APP_ADMIN_PASSWORD || "dev-temporary";
 const ADMIN_USERS = [
-  // Optional admin users (username + password). CHANGE these before production.
-  { username: "admin", password: "@@Cs-Channel-2026" }, // CHANGE THIS
+  // Optional admin users (username + password). Change/remove before production.
+  // Example: { username: "admin", password: "yourStrongPassword" }
+  // { username: "admin", password: "@@Cs-Channel-2026" }, // if present, change this before production
 ];
 
 // Session storage key used to persist the admin auth state in the browser session
@@ -85,19 +72,23 @@ function AdminPanel() {
   }
 
   // Verify credentials locally (client-side)
-  // Returns true if valid
+  // Returns true only when password exactly matches the configured global password
+  // OR when username+password exactly match an entry in ADMIN_USERS.
   function verifyCredentialsLocal(username, password) {
-    if (!password) return false;
-    if (username) {
-      const found = ADMIN_USERS.find((u) => String(u.username) === String(username));
-      if (found && found.password === password) {
-        return true;
-      }
-      return false;
+    // require a non-empty string password
+    if (typeof password !== "string" || !password.trim()) return false;
+    const candidate = password.trim();
+
+    if (username && String(username).trim()) {
+      const uname = String(username).trim();
+      const found = ADMIN_USERS.find((u) => String(u.username) === uname);
+      if (!found) return false;
+      const expected = String(found.password || "").trim();
+      return expected === candidate;
     }
-    // No username provided — check global password
-    if (password === DEFAULT_GLOBAL_PASSWORD) return true;
-    return false;
+
+    // No username provided — check the single global password exactly (after trimming)
+    return candidate === String(DEFAULT_GLOBAL_PASSWORD).trim();
   }
 
   // Handle login submit (username optional)
@@ -110,7 +101,7 @@ function AdminPanel() {
     const password = document.getElementById("admin-password")?.value || "";
 
     // Basic client-side validation
-    if (!password) {
+    if (!password || !String(password).trim()) {
       setLoginError("Password is required");
       setLoginLoading(false);
       return;
