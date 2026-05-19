@@ -42,7 +42,7 @@ function formatTime(ts) {
 const DEFAULT_GLOBAL_PASSWORD = "Chat-with-us"; // CHANGE THIS
 const ADMIN_USERS = [
   // Optional admin users (username + password). CHANGE these before production.
-  { username: "admin", password: "Cs-Channel-2026" }, // CHANGE THIS
+  { username: "admin", password: "@@Cs-Channel-2026" }, // CHANGE THIS
 ];
 
 // Session storage key used to persist the admin auth state in the browser session
